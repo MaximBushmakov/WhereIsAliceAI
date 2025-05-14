@@ -1,11 +1,9 @@
-%%writefile ai.cu
-
 #include "ai_data.h"
 #include "ai_methods.h"
 #include "simulator_data.h"
 #include "utils.h"
 
-#inlude <random>
+#include <random>
 #include "cudnn.h"
 
 namespace AI {
@@ -41,30 +39,41 @@ namespace AI {
         return matmul_oper;
     }
 
-    cudnnBackendDescriptor_t conv2DParams(cudnnDataType_t dtype = CUDNN_DATA_HALF, cudnnConvolutionMode_t mode = CUDNN_CONVOLUTION) {
-        cudnnBackendDescriptor_t conv_params;
-        int64_t dim = 2;
-        int64_t pre_pad[] = {0, 0};
-        int64_t post_pad[] = {0,  0};
-        int64_t filter_stride[] = {1, 1};
-        int64_t dilation[] = {1, 1};
-
-        cudnnBackendCreateDescriptor(CUDNN_BACKEND_CONVOLUTION_DESCRIPTOR, &conv);
-        checkCuDNN(cudnnBackendSetAttribute(conv, CUDNN_ATTR_CONVOLUTION_SPATIAL_DIMS, CUDNN_TYPE_INT64, 1, &dim));
-        checkCuDNN(cudnnBackendSetAttribute(conv, CUDNN_ATTR_CONVOLUTION_COMP_TYPE, CUDNN_TYPE_DATA_TYPE, 1, &dtype));
-        checkCuDNN(cudnnBackendSetAttribute(conv, CUDNN_ATTR_CONVOLUTION_CONV_MODE, CUDNN_TYPE_CONVOLUTION_MODE, 1, &mode));
-        checkCuDNN(cudnnBackendSetAttribute(conv, CUDNN_ATTR_CONVOLUTION_PRE_PADDINGS, CUDNN_TYPE_INT64, dim, pre_pad));
-        checkCuDNN(cudnnBackendSetAttribute(conv, CUDNN_ATTR_CONVOLUTION_POST_PADDINGS, CUDNN_TYPE_INT64, dim, post_pad));
-        checkCuDNN(cudnnBackendSetAttribute(conv, CUDNN_ATTR_CONVOLUTION_FILTER_STRIDES, CUDNN_TYPE_INT64, dim, filter_stride));
-        checkCuDNN(cudnnBackendSetAttribute(conv, CUDNN_ATTR_CONVOLUTION_DILATIONS, CUDNN_TYPE_INT64, dim, dilation));
-        checkCuDNN(cudnnBackendFinalize(conv));
-
-        return conv;
+    __global__ void initSyncUpstream(DataShared* data) {
+        data->sync.compute = new cuda::counting_semaphore<cuda::thread_scope_device, 256>(0);
+        data->sync.write = new cuda::binary_semaphore<cuda::thread_scope_device>(1);
     }
 
-    __global__ initSyncUpstream(DataShared* data) {
-        data->sync->compute = new cuda::counting_semaphore<cuda::cuda_threadscope_device, 256>(0);
-        data->sync->write = new cuda::binary_semaphore<cuda::cuda_treadscope_device>(1);
+    __global__ void acquireComputeUpstream(DataShared* data) {
+        data->sync.compute.acquire();
+    }
+
+    __global__ void releaseComputeUpstream(DataShared* data) {
+        data->sync.compute->release();
+    }
+
+    __global__ void acquireAllComputeUpstream(DataShared* data) {
+        for (uint i = 0; i < data->copies_num; ++i) {
+            data->sync.compute.acquire();
+        }
+    }
+
+    __global__ void releaseAllComputeUpstream(DataShared* data) {
+        for (uint i = 0; i < data->copies_num; ++i) {
+            data->sync.compute->release();
+        }
+    }
+
+    __global__ void acquireWriteUpstream(DataShared* data) {
+        data->sync.write.acquire();
+    }
+
+    __global__ void releaseWriteUpstream(DataShared* data) {
+        data->sync.write->release();
+    }
+
+    __global__ void increaseCopiesNumUpstream(DataShared* data) {
+        ++data->copies_num;
     }
 
     __host__ DataShared* initShared() {
@@ -72,47 +81,15 @@ namespace AI {
 
         // user: fill tensors sizes
         uint tensors_sizes_host[] = {
-            // conv
-            300 * 150 * 5 * 4 * 3 * 3,
-            // IB + shortcut
-            320 * 160 * 4 * 16,
-            320 * 160 * 16 * 3 * 3,
-            160 * 160 * 16 * 4,
-            160 * 160 * 4 * 4 * 2 * 2,
-            // IB + shortcut
-            160 * 160 * 4 * 16,
-            80 * 80 * 16 * 3 * 3,
-            80 * 80 * 16 * 8,
-            80 * 80 * 4 * 8 * 2 * 2,
-            // IB + shortcut
-            80 * 80 * 8 * 32,
-            40 * 40 * 32 * 3 * 3,
-            40 * 40 * 32 * 16,
-            40 * 40 * 8 * 16 * 2 * 2,
-            // IB + shortcut
-            40 * 40 * 16 * 64,
-            20 * 20 * 64 * 3 * 3,
-            20 * 20 * 64 * 32,
-            20 * 20 * 16 * 32 * 2 * 2,
-            // IB + shortcut
-            20 * 20 * 32 * 128,
-            10 * 10 * 128 * 3 * 3,
-            10 * 10 * 128 * 64,
-            10 * 10 * 32 * 64 * 2 * 2,
-            // conv
-            8 * 8 * 64 * 3 * 3,
-            // conv 1x1
-            8 * 8 * 64 * 64,
-            // dense
-            4096 * 1024,
-            // dense
-            1024 * 256
+            0
         };
+
+        data_host->copies_num = 0;
 
         data_host->tensors_num = sizeof(tensors_sizes_host) / sizeof(tensors_sizes_host[0]);
 
-        cudaMalloc(&data_host->tensor_sizes, sizeof(tensors_sizes_host));
-        cudaMemcpy(data_host->tensor_sizes, tensors_sizes_host, sizeof(tensors_sizes_host), cudaMemcpyHostToDevice);
+        cudaMalloc(&data_host->tensors_sizes, sizeof(tensors_sizes_host));
+        cudaMemcpy(data_host->tensors_sizes, tensors_sizes_host, sizeof(tensors_sizes_host), cudaMemcpyHostToDevice);
 
         cudaMalloc(&data_host->tensors_compute, data_host->tensors_num * sizeof(half*));
         cudaMalloc(&data_host->tensors_write, data_host->tensors_num * sizeof(half*));
@@ -145,8 +122,8 @@ namespace AI {
         free(tensors_compute_host);
         free(tensors_write_host);
 
-        Data* data_device;
-        cudaMalloc(&data, sizeof(DataShared));
+        DataShared* data_device;
+        cudaMalloc(&data_device, sizeof(DataShared));
         cudaMemcpy(data_device, data_host, sizeof(DataShared), cudaMemcpyHostToDevice);
 
         initSyncUpstream<<<1, 1>>>(data_device);
@@ -154,53 +131,26 @@ namespace AI {
         return data_device;
     }
 
-    __global__ releaseComputeUpstream(DataShared* data) {
-        data->sync->compute.release();
-    }
-
-    __host__ DataCopied* initCopied(Simulator::Data* simulator) {
-
+    __host__ DataCopied* initCopied(Simulator::Data* simulator, DataShared* data_shared) {
+        
         DataCopied* data_host = (DataCopied*) malloc(sizeof(DataCopied));
+
+        data_host->simulator.player_input = simulator->player_tensor.data;
+        data_host->simulator.monsters_input = simulator->monsters_tensor.data;
+        data_host->simulator.agents_data = (half**) malloc(simulator->agents_size * sizeof(half*));
+        for (uint id = 0; id < simulator->agents_size; ++id) {
+            data_host->simulator.agents_data[id] = simulator->agents[id].agent->data;
+        }
 
         // user: fill tensors sizes
         uint tensors_sizes_host[] = {
-            300 * 150 * 5,
-            // conv
-            320 * 160 * 4,
-            // IB + shortcut
-            320 * 160 * 16,
-            160 * 160 * 16,
-            160 * 160 * 4,
-            // IB + shortcut
-            160 * 160 * 16,
-            80 * 80 * 16,
-            80 * 80 * 8,
-            // IB + shortcut
-            80 * 80 * 32,
-            40 * 40 * 32,
-            40 * 40 * 16,
-            // IB + shortcut
-            40 * 40 * 64,
-            20 * 20 * 64,
-            20 * 20 * 32,
-            // IB + shortcut
-            20 * 20 * 128,
-            10 * 10 * 128,
-            10 * 10 * 64,
-            // conv without paddings
-            8 * 8 * 64,
-            // 1x1 conv
-            8 * 8 * 64,
-            // dense
-            1024,
-            // dense,
-            256 + 16
+            0
         };
 
         data_host->tensors_num = sizeof(tensors_sizes_host) / sizeof(tensors_sizes_host[0]);
 
-        cudaMalloc(&data_host->tensor_sizes, sizeof(tensors_sizes_host));
-        cudaMemcpy(data_host->tensor_sizes, tensors_sizes_host, sizeof(tensors_sizes_host), cudaMemcpyHostToDevice);
+        cudaMalloc(&data_host->tensors_sizes, sizeof(tensors_sizes_host));
+        cudaMemcpy(data_host->tensors_sizes, tensors_sizes_host, sizeof(tensors_sizes_host), cudaMemcpyHostToDevice);
 
         cudaMalloc(&data_host->tensors, data_host->tensors_num * sizeof(half*));
 
@@ -216,47 +166,128 @@ namespace AI {
 
             cudaMalloc(&tensors_host[tensor_id], size * sizeof(half));
             cudaMemcpy(tensors_host[tensor_id], zero_tensor, size * sizeof(half), cudaMemcpyHostToDevice);
-            free(random_tensor);
+            free(zero_tensor);
         }
 
         cudaMemcpy(data_host->tensors, tensors_host, data_host->tensors_num * sizeof(half*), cudaMemcpyHostToDevice);
 
-        // user: fill pointers to input data and agent data
-        data_host->input_data = tensors_host[0];
-        data_host->agent_data = tensors_host[20] + 256;
-
         free(tensors_host);
 
-        Data* data_device;
-        cudaMalloc(&data, sizeof(DataCopied));
+        DataCopied* data_device;
+        cudaMalloc(&data_device, sizeof(DataCopied));
         cudaMemcpy(data_device, data_host, sizeof(DataCopied), cudaMemcpyHostToDevice);
 
-        releaseComputeUpstream<<<1, 1>>>(data_device);
+        releaseComputeUpstream<<<1, 1>>>(data_shared);
+        increaseCopiesNumUpstream<<<1, 1>>>(data_shared);
 
         return data_device;
     }
 
-    cudaGraph_t forwardStepBase(cudaGraph_t graph) {
-        cudnnDataType_t dtype_half = CUDNN_DATA_HALF;
-        int64_t alignment = 64;
-    }
-
-    cudaGraph_t forwardStep() {
+    cudaGraph_t trainForwardStep(Thread::Data* data) {
         cudaGraph_t graph;
         cudaGraphCreate(&graph, 0);
 
+        cudaGraphNodeParams compute_acquire_params = { cudaGraphNodeTypeKernel };
+        compute_acquire_params.kernel = {
+            .func = acquireComputeUpstream,
+            .gridDim = dim3(1, 1, 1),
+            .blockDim = dim3(1, 1, 1),
+            .kernelParams = {&data->ai_shared}
+        };
+        cudaGraphNode_t compute_acquire_node;
+        cudaGraphAddNode(&compute_acquire_node, graph, NULL, 0, &compute_acquire_params);
+
         // user: implement forward pass of training
         // all operations done before simulator update
-        forwardStepBase(graph);
+
+        /* sample of cudnn populate:
+        cudaGraph_t forward_graph;
+        cudaGraphCreate(&forward_graph, 0);
+        auto [forward_handle, forward_plan, forward_varpack] = ...;
+        cudnnBackendPopulateCudaGraph(forward_handle, forward_plan, forward_varpack, forward_graph);
+        cudaGraphNode_t forward_node;
+        cudaGraphAddChildGraphNode(&forward_node, graph, NULL, 0, forward_graph);
+        cudaGraphDestroy(forward_graph);
+        */
 
         return graph;
     }
 
-    cudaGraph_t backwardStep() {
+    cudaGraph_t trainBackwardStep(Thread::Data* data) {
         cudaGraph_t graph;
         cudaGraphCreate(&graph, 0);
+
+        cudaGraphConditionalHandle update_handle;
+        cudaGraphConditionalHandleCreate(&update_handle, graph, 0, cudaGraphCondAssignDefault);
+
         // user: implement backward pass of training
         // all operations done after simulator update
+        // set update_handle to true for copy
+
+        cudaGraphNodeParams write_acquire_params = { cudaGraphNodeTypeKernel };
+        write_acquire_params.kernel = {
+            .func = acquireWriteUpstream,
+            .gridDim = dim3(1, 1, 1),
+            .blockDim = dim3(1, 1, 1),
+            .kernelParams = {&data->ai_shared}
+        };
+        cudaGraphNode_t write_acquire_node;
+        cudaGraphAddNode(&write_acquire_node, graph, NULL, 0, &write_acquire_params);
+
+        // user: implement update
+
+        cudaGraphNodeParams write_release_params = { cudaGraphNodeTypeKernel };
+        write_release_params.kernel = {
+            .func = releaseWriteUpstream,
+            .gridDim = dim3(1, 1, 1),
+            .blockDim = dim3(1, 1, 1),
+            .kernelParams = {&data->ai_shared}
+        };
+        cudaGraphNode_t write_release_node;
+        cudaGraphAddNode(&write_release_node, graph, NULL, 0, &write_release_params);
+
+        cudaGraphNodeParams update_params = { cudaGraphNodeTypeConditional };
+        update_cond_params.conditional = {
+            .handle = update_handle;
+            .type = cudaGraphCondTypeIf;
+            .size = 1;
+        }
+        cudaGraphNode_t update_cond_node;
+        cudaGraphAddNode(&update_cond_node, graph, {&write_release_node}, 1, &update_cond_params);
+        cudaGraph_t update_cond_graph = update_cond_params.conditional.phGraph_out[0];
+
+        cudaGraphNodeParams compute_acquire_all_params = { cudaGraphNodeTypeKernel };
+        compute_acquire_all_params.kernel = {
+            .func = acquireAllComputeUpstream,
+            .gridDim = dim3(1, 1, 1),
+            .blockDim = dim3(1, 1, 1),
+            .kernelParams = {&data->ai_shared}
+        };
+        cudaGraphNode_t compute_acquire_all_node;
+        cudaGraphAddNode(&compute_acquire_all_node, update_cond_graph, NULL, 0, &compute_acquire_all_params);
+
+        // user: implement copy
+
+        cudaGraphNodeParams compute_release_all_params = { cudaGraphNodeTypeKernel };
+        compute_release_all_params.kernel = {
+            .func = releaseAllComputeUpstream,
+            .gridDim = dim3(1, 1, 1),
+            .blockDim = dim3(1, 1, 1),
+            .kernelParams = {&data->ai_shared}
+        };
+        cudaGraphNode_t compute_release_all_node;
+        cudaGraphAddNode(&compute_release_all_node, update_cond_graph, NULL, 0, &compute_release_all_params);
+
+        cudaGraphNodeParams compute_release_params = { cudaGraphNodeTypeKernel };
+        compute_release_params.kernel = {
+            .func = releaseComputeUpstream,
+            .gridDim = dim3(1, 1, 1),
+            .blockDim = dim3(1, 1, 1),
+            .kernelParams = {&data->ai_shared}
+        };
+        cudaGraphNode_t compute_release_node;
+        cudaGraphAddNode(&compute_release_node, graph, {&update_cond_node}, 1, &compute_release_params);
+
         return graph;
     }
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "character.h"
 #include "utils.h"
 
 namespace Simulator {
@@ -7,11 +8,12 @@ namespace Simulator {
         Clear,
         NoMove,
         Boundary,
-        DoorClosed,
-        DoorOpen,
+        Door,
         Window,
         Cultist,
+        CultistChant,
         Astral,
+        AstralRush,
         Player,
         Last = Player
     };
@@ -23,55 +25,96 @@ namespace Simulator {
         Last = Madness
     };
 
+    struct Door {
+        float2 coords;
+        float2 coords_in;
+        uint boundary_id;
+        uint2 coords_open[4];
+        uint2 coords_closed[4];
+        bool is_open;
+    };
+
+    struct Window {
+        float2 coords;
+        float2 coords_in;
+        float2 coords_out;
+    };
+
+    struct InteractableData {
+        ObjectType type;
+        void* object;
+    };
+
+    struct AgentData {
+        Character::Type type;
+        Character::Agent* agent;
+    };
+
+    struct LightingMap {
+        LightingType* normal;
+        LightingType* madness;
+        LightingType* dynamic;
+    };
+
     struct Data {
-
-        struct TensorData {
-            const uint size;
-            const half* data;
-
-            __host__ __device__ half* getObjectMap() {
-                return data;
-            }
-
-            __host__ __device__ half* getLightingMap() {
-                return data + size;
-            }
-
-            __host__ __device__ half* getSoundMap() {
-                return data + 2 * size;
-            }
-
-            __host__ __device__ half* getHearingMap() {
-                return data + 3 * size;
-            }
-
-            __host__ __device__ half* getSightMap() {
-                return data + 4 * size;
-            }
-
-            __host__ __device__ uint getSize() {
-                return 5 * size;
-            }
-        };
 
         uint width;
         uint height;
 
-        uint boundaries_size;
-        uint2_pair* boundaries;
-        uint* boundaries_map;
+        struct TensorData {
+            half* data;
 
-        uint roofed_size;
-        uint2_pair* roofed_area;
-        uint lighted_size;
-        uint2_pair* lighted_area;
+            __host__ __device__ half* getObject(uint ind) {
+                return data + ind * 5;
+            }
+
+            __host__ __device__ half* getLighting(uint ind) {
+                return data + ind * 5 + 1;
+            }
+
+            __host__ __device__ half* getSound(uint ind) {
+                return data + ind * 5 + 2;
+            }
+
+            __host__ __device__ half* getHearing(uint ind) {
+                return data + ind * 5 + 3;
+            }
+
+            __host__ __device__ half* getSight(uint ind) {
+                return data + ind * 5 + 4;
+            }
+        };
+
+        TensorData player_tensor;
+        TensorData monsters_tensor;
+
+        half* player_hearing_map;
+        half* monsters_hearing_map;
 
         uint agents_size;
-        Character::Agent** agents;
+        AgentData* agents;
 
-        bool madness;
+        float health;
+        float madness;
 
-        TensorData player;
-        TensorData monsters;
-    }
+        bool madness_world;
+
+        uint boundaries_size;
+        float2_pair* boundaries;
+        bool** boundaries_masks;
+        uint* boundaries_map;
+
+        uint interactables_size;
+        InteractableData* interactables;
+        bool* interactables_mask;
+        uint* interactables_map;
+
+        ObjectType* object_map;
+
+        LightingMap lighting_map;
+
+        bool** sight_masks;
+
+        curandState* seed;
+    };
 }

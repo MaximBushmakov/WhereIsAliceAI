@@ -1,14 +1,13 @@
 #pragma once
 #include "ai_data.h"
-#include "simulator_data.h"
+#include "thread_data.h"
 #include "utils.h"
 
 namespace AI {
-    cudnnBackendDescriptor_t tensor3D(int64_t n, int64_t m, int64_t k, int64_t uid, cudnnDataType_t dtype = CUDNN_DATA_HALF, int64_t alignment = 64);
 
     __host__ DataShared* initShared();
-    __host__ DataCopied* initCopied(Simulator::Data simulator);
+    __host__ DataCopied* initCopied(Simulator::Data* simulator, DataShared* data_shared);
 
-    cudaGraph_t forwardStep();
-    cudaGraph_t backwardStep();
+    cudaGraph_t trainForwardStep(Thread::Data* data);
+    cudaGraph_t trainBackwardStep(Thread::Data* data);
 }

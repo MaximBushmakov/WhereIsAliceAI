@@ -1,5 +1,10 @@
-// binary semaphore
-#include <cuda/semaphore>
+#include "ai_data.h"
+#include "ai_methods.h"
+#include "simulator_data.h"
+#include "simulator_methods.h"
+#include "thread_data.h"
+#include "thread_methods.h"
+#include "utils.h"
 
 // neural network
 #include "cudnn.h"
@@ -9,44 +14,6 @@
 
 // for debug purposes
 #include <iostream>
-
-#include "utils.h"
-
-// read GPU time (ns) in a kernel
-__forceinline__ __device__ ull get_globaltimer() {
-    ull time;
-    asm volatile ("mov.u64 %0, %globaltimer;" : "=l"(time));
-    return time;
-}
-
-// simulator_base and ai_shared are shared between different threads
-// links from host to device
-struct ThreadData {
-    Simulator::Data* simulator_base;
-    Simulator::Data* simulator;
-    AI::DataShared* ai_shared;
-    AI::DataCopied* ai_copied;
-}
-
-__host__ ThreadData* init(uint threads_num) {
-    ThreadData* data = (ThreadData*) malloc(threads_num * sizeof(ThreadData));
-
-    Simulator::Data* simulator_host = Simulator::initHost();
-
-    data[0]->ai_shared = AI::initShared();
-    for (uint thread_id = 0; thread_id < threads_num; ++thread_id) {
-        data[thread_id]->ai_shared = data[0]->ai_shared;
-        data[thread_id]->ai_copied = AI::initCopied(simulator_host);
-    }
-
-    data[0]->simulator_base = Simulator::copyHostToDevice(simulator_host);
-    for (uint thread_id = 0; thread_id < threads_num; ++thread_id) {
-        data[thread_id]->simulator_base = data[0]->simulator_base;
-        data[thread_id]->simulator = Simulator::copyHostToDevice(simulator_host, data[thread_id]->ai_copied);
-    }
-
-    return data;
-}
 
 
 /*  startFunc<<<1, 1>>>(start_params);
@@ -99,12 +66,12 @@ cudaGraph_t cudaGraphWhile(cudaGraph_t graph, cudaGraphConditionalHandle handle,
 }
 
 __global__ void whileTimeStart(cudaGraphConditionalHandle handle, ull* finish_time, ull time) {
-    *finish_time = get_globaltimer() + time;
+    *finish_time = Utils::get_globaltimer() + time;
     cudaGraphSetConditional(handle, 1);
 }
 
 __global__ void whileTimeUpdate(cudaGraphConditionalHandle handle, ull* finish_time) {
-    cudaGraphSetConditional(handle, get_globaltimer() < *finish_time ? 1 : 0);
+    cudaGraphSetConditional(handle, Utils::get_globaltimer() < *finish_time ? 1 : 0);
 }
 
 // while globaltime < start + time: run subgraph
@@ -132,7 +99,7 @@ void runAll() {
     const int batch_size = 100;
     const int work_time = 30; // seconds
 
-    ThreadData* data = init(threads_num);
+    auto [data, size] = init(threads_num);
 
     cudaGraph_t graph;
     cudaGraphCreate(&graph, 0);
@@ -142,7 +109,7 @@ void runAll() {
         cudaGraph_t body_graph = whileTime(work_time * (ull) 1e9, graph);
 
         // forward step
-        cudaGraph_t forward_graph = AI::forwardStep();
+        cudaGraph_t forward_graph = AI::forwardStep(data[thread_id]);
         cudaGraphNode_t forward_node;
         cudaGraphAddChildGraphNode(&forward_node, body_graph, NULL, 0, forward_graph);
         cudaGraphDestroy(forward_graph);
@@ -150,13 +117,13 @@ void runAll() {
         // simulator step
         cudaGraphConditionalHandle reset_handle;
         cudaGraphConditionalHandleCreate(&reset_handle, body_graph, 0, cudaGraphCondAssignDefault);
-        cudaGraph simualtor_graph = Simulator::step(data[thread_id], reset_handle);
+        cudaGraph_t simulator_graph = Simulator::step(data[thread_id]->simulator, size, reset_handle);
         cudaGraphNode_t simulator_node;
         cudaGraphAddChildGraphNode(&simulator_node, body_graph, {&forward_node}, 1, simulator_graph);
         cudaGraphDestroy(simulator_graph);
 
         // backward step
-        cudaGraph_t backward_graph = AI::backwardStep();
+        cudaGraph_t backward_graph = AI::backwardStep(data[thread_id]);
         cudaGraphNode_t backward_node;
         cudaGraphAddChildGraphNode(&backward_node, body_graph, {&simulator_node}, 1, backward_graph);
         cudaGraphDestroy(backward_graph);
@@ -170,8 +137,17 @@ void runAll() {
         }
         cudaGraphNode_t reset_cond_node;
         cudaGraphAddNode(&reset_cond_node, body_graph, {&backward_node}, 1, &reset_cond_params);
-        cudaGraph_t reset_graph = reset_cond_params.conditional.phGraph_out[0];
-        Simulator::reset(reset_graph);
+        cudaGraph_t reset_cond_graph = reset_cond_params.conditional.phGraph_out[0];
+
+        cudaGraphNodeParams reset_params = { cudaGraphNodeTypeKernel };
+        reset_params.kernel = {
+            .func = Simulator::copyDeviceToDevice,
+            .gridDim = dim3(1, 1, 1),
+            .blockDim = dim3(1, 1, 1),
+            .kernelParams = {&data[thread_id].simulator_base, &data[thread_id].simulator}
+        };
+        cudaGraphNode_t reset_node;
+        cudaGraphAddNode(&reset_node, reset_cond_graph, NULL, 0, &reset_params);
     }
 
     cudaGraphExec_t graph_exec;
@@ -181,20 +157,13 @@ void runAll() {
 
     cudaDeviceSynchronize();
 
-    // there is some internal data allocated in device memory
-    // should be cleaned by OS
-
     cudaGraphExecDestroy(graph_exec);
     cudaGraphDestroy(graph);
 
     // write weights to system
 
-    // for each thread:
-        // clear simulator
-        // clear ai
-    // clear collector
-    // clear host data
-
+    // there is some data allocated in host and device memory
+    // should be cleaned by OS
 }
 
 
