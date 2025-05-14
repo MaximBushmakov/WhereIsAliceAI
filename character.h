@@ -309,10 +309,6 @@ namespace Character {
             data[22] = __float2half_rn((float) shadow_coords.y / 150);
         }
 
-        __host__ __device__ __forceinline__ void updateMaxX() {
-            data[23] = __float2half_rn(max_x / 300);
-        }
-
         static constexpr uint data_size = 24;
 
         __device__ __forceinline__ void update() {
@@ -330,7 +326,6 @@ namespace Character {
             updateUseWindow();
             updateStamina();
             updateShadowCoords();
-            updateMaxX();
         }
 
         __host__ __forceinline__ void updateHost() {
@@ -348,7 +343,6 @@ namespace Character {
             updateUseWindow();
             updateStamina();
             updateShadowCoords();
-            updateMaxX();
         }
 
         __host__ void init (float2 coords);
