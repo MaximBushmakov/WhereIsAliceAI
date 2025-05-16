@@ -23,21 +23,17 @@ cudaGraph_t cudaGraphWhile(cudaGraph_t graph, cudaGraphConditionalHandle handle,
     void* startFunc, void* start_args[], void* updateFunc, void* update_args[]) {
 
     cudaGraphNodeParams start_params = { cudaGraphNodeTypeKernel };
-    start_params.kernel = {
-        .func = startFunc,
-        .gridDim = dim3(1, 1, 1),
-        .blockDim = dim3(1, 1, 1),
-        .kernelParams = start_args
-    };
+    start_params.kernel.func = startFunc;
+    start_params.kernel.gridDim = dim3(1, 1, 1);
+    start_params.kernel.blockDim = dim3(1, 1, 1);
+    start_params.kernel.kernelParams = start_args;
     cudaGraphNode_t start_node;
     cudaGraphAddNode(&start_node, graph, NULL, 0, &start_params);
 
     cudaGraphNodeParams cond_params = { cudaGraphNodeTypeConditional };
-    cond_params.conditional = {
-        .handle = handle,
-        .type = cudaGraphCondTypeWhile,
-        .size = 1
-    };
+    cond_params.conditional.handle = handle;
+    cond_params.conditional.type = cudaGraphCondTypeWhile;
+    cond_params.conditional.size = 1;
     cudaGraphNode_t cond_node;
     cudaGraphAddNode(&cond_node, graph, {&start_node}, 1, &cond_params);
 
@@ -50,12 +46,10 @@ cudaGraph_t cudaGraphWhile(cudaGraph_t graph, cudaGraphConditionalHandle handle,
     cudaGraphChildGraphNodeGetGraph(out_node, &out_graph);
 
     cudaGraphNodeParams update_params = { cudaGraphNodeTypeKernel };
-    update_params.kernel = {
-        .func = updateFunc,
-        .gridDim = dim3(1, 1, 1),
-        .blockDim = dim3(1, 1, 1),
-        .kernelParams = update_args
-    };
+    update_params.kernel.func = updateFunc;
+    update_params.kernel.gridDim = dim3(1, 1, 1);
+    update_params.kernel.blockDim = dim3(1, 1, 1);
+    update_params.kernel.kernelParams = update_args;
     cudaGraphNode_t update_node;
     cudaGraphAddNode(&update_node, body_graph, {&out_node}, 1, &update_params);
 
@@ -133,23 +127,19 @@ void runAll() {
 
         // if reached end of simulation: reset simulator
         cudaGraphNodeParams reset_cond_params = { cudaGraphNodeTypeConditional };
-        reset_cond_params.conditional = {
-            .handle = reset_handle,
-            .type = cudaGraphCondTypeIf,
-            .size = 1
-        };
+        reset_cond_params.conditional.handle = reset_handle;
+        update_params.kernel.type = cudaGraphCondTypeIf;
+        update_params.kernel.size = 1;
         cudaGraphNode_t reset_cond_node;
         cudaGraphAddNode(&reset_cond_node, body_graph, {&backward_node}, 1, &reset_cond_params);
         cudaGraph_t reset_cond_graph = reset_cond_params.conditional.phGraph_out[0];
 
         cudaGraphNodeParams reset_params = { cudaGraphNodeTypeKernel };
         void* reset_args[] = {&data, &data_base};
-        reset_params.kernel = {
-            .func = Simulator::copyDeviceToDevice,
-            .gridDim = dim3(1),
-            .blockDim = dim3(1),
-            .kernelParams = reset_args
-        };
+        reset_params.kernel.func = Simulator::copyDeviceToDevice;
+        reset_params.kernel.gridDim = dim3(1);
+        reset_params.kernel.blockDim = dim3(1);
+        reset_params.kernel.kernelParams = reset_args;
         cudaGraphNode_t reset_node;
         cudaGraphAddNode(&reset_node, reset_cond_graph, NULL, 0, &reset_params);
     }

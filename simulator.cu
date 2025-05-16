@@ -5,7 +5,7 @@
 #include "utils.h"
 
 #include <iostream>
-
+#include <cstring>
 #include <algorithm>
 
 #define _USE_MATH_DEFINES
@@ -1467,56 +1467,46 @@ namespace Simulator {
 
         cudaGraphNodeParams clear_masks_params = { cudaGraphNodeTypeKernel };
         void* clear_masks_input[] = {&data};
-        clear_masks_params.kernel = {
-            .func = clearMasks,
-            .gridDim = dim3((size - 1) / 1024 + 1),
-            .blockDim = dim3(1024),
-            .kernelParams = clear_masks_input
-        };
+        clear_masks_params.kernel.func = clearMasks;
+        clear_masks_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
+        clear_masks_params.kernel.blockDim = dim3(1024);
+        clear_masks_params.kernel.kernelParams = clear_masks_input;
         cudaGraphNode_t clear_masks_node;
         cudaGraphAddNode(&clear_masks_node, *graph, NULL, 0, &clear_masks_params);
 
         cudaGraphNodeParams actions_params = { cudaGraphNodeTypeKernel };
         void* actions_input[] = {&data};
-        actions_params.kernel = {
-            .func = doActions,
-            .gridDim = dim3(1),
-            .blockDim = dim3(1),
-            .kernelParams = actions_input
-        };
+        actions_params.kernel.func = doActions;
+        actions_params.kernel.gridDim = dim3(1);
+        actions_params.kernel.blockDim = dim3(1);
+        actions_params.kernel.kernelParams = actions_input;
         cudaGraphNode_t actions_node;
         cudaGraphAddNode(&actions_node, *graph, {&clear_masks_node}, 1, &actions_params);
 
         cudaGraphNodeParams sound_params = { cudaGraphNodeTypeKernel };
         void* sound_input[] = {&data};
-        sound_params.kernel = {
-            .func = updateSound,
-            .gridDim = dim3((size - 1) / 1024 + 1),
-            .blockDim = dim3(1024),
-            .kernelParams = sound_input
-        };
+        sound_params.kernel.func = updateSound;
+        sound_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
+        sound_params.kernel.blockDim = dim3(1024);
+        sound_params.kernel.kernelParams = sound_input;
         cudaGraphNode_t sound_node;
         cudaGraphAddNode(&sound_node, *graph, {&actions_node}, 1, &sound_params);
 
         cudaGraphNodeParams fill_sight_params = { cudaGraphNodeTypeKernel };
         void* fill_sight_input[] = {&data};
-        fill_sight_params.kernel = {
-            .func = fillSight,
-            .gridDim = dim3((size - 1) / 1024 + 1),
-            .blockDim = dim3(1024),
-            .kernelParams = fill_sight_input
-        };
+        fill_sight_params.kernel.func = fillSight;
+        fill_sight_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
+        fill_sight_params.kernel.blockDim = dim3(1024);
+        fill_sight_params.kernel.kernelParams = fill_sight_input;
         cudaGraphNode_t fill_sight_node;
         cudaGraphAddNode(&fill_sight_node, *graph, {&actions_node}, 1, &fill_sight_params);
 
         cudaGraphNodeParams fill_shadows_params = { cudaGraphNodeTypeKernel };
         void* fill_shadows_input[] = {&data};
-        fill_shadows_params.kernel = {
-            .func = fillShadows,
-            .gridDim = dim3((size - 1) / 1024 + 1),
-            .blockDim = dim3(1024),
-            .kernelParams = fill_shadows_input
-        };
+        fill_shadows_params.kernel.func = fillShadows;
+        fill_shadows_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
+        fill_shadows_params.kernel.blockDim = dim3(1024);
+        fill_shadows_params.kernel.kernelParams = fill_shadows_input;
         cudaGraphNode_t fill_shadows_node;
         cudaGraphAddNode(&fill_shadows_node, *graph, {&fill_sight_node}, 1, &fill_shadows_params);
     }
@@ -1528,76 +1518,62 @@ namespace Simulator {
 
         cudaGraphNodeParams clear_masks_params = { cudaGraphNodeTypeKernel };
         void* clear_masks_input[] = {&data};
-        clear_masks_params.kernel = {
-            .func = clearMasks,
-            .gridDim = dim3((size - 1) / 1024 + 1),
-            .blockDim = dim3(1024),
-            .kernelParams = clear_masks_input
-        };
+        clear_masks_params.kernel.func = clearMasks;
+        clear_masks_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
+        clear_masks_params.kernel.blockDim = dim3(1024);
+        clear_masks_params.kernel.kernelParams = clear_masks_input;
         cudaGraphNode_t clear_masks_node;
         cudaGraphAddNode(&clear_masks_node, *graph, NULL, 0, &clear_masks_params);
 
         cudaGraphNodeParams actions_params = { cudaGraphNodeTypeKernel };
         void* actions_input[] = {&data};
-        actions_params.kernel = {
-            .func = doActions,
-            .gridDim = dim3(1),
-            .blockDim = dim3(1),
-            .kernelParams = actions_input
-        };
+        actions_params.kernel.func = doActions;
+        actions_params.kernel.gridDim = dim3(1);
+        actions_params.kernel.blockDim = dim3(1);
+        actions_params.kernel.kernelParams = actions_input;
         cudaGraphNode_t actions_node;
         cudaGraphAddNode(&actions_node, *graph, {&clear_masks_node}, 1, &actions_params);
 
         cudaGraphNodeParams sound_params = { cudaGraphNodeTypeKernel };
         void* sound_input[] = {&data};
-        sound_params.kernel = {
-            .func = updateSound,
-            .gridDim = dim3((size - 1) / 1024 + 1),
-            .blockDim = dim3(1024),
-            .kernelParams = sound_input
-        };
+        sound_params.kernel.func = updateSound;
+        sound_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
+        sound_params.kernel.blockDim = dim3(1024);
+        sound_params.kernel.kernelParams = sound_input;
         cudaGraphNode_t sound_node;
         cudaGraphAddNode(&sound_node, *graph, {&actions_node}, 1, &sound_params);
 
         cudaGraphNodeParams fill_sight_params = { cudaGraphNodeTypeKernel };
         void* fill_sight_input[] = {&data};
-        fill_sight_params.kernel = {
-            .func = fillSight,
-            .gridDim = dim3((size - 1) / 1024 + 1),
-            .blockDim = dim3(1024),
-            .kernelParams = fill_sight_input
-        };
+        fill_sight_params.kernel.func = fillSight;
+        fill_sight_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
+        fill_sight_params.kernel.blockDim = dim3(1024);
+        fill_sight_params.kernel.kernelParams = fill_sight_input;
         cudaGraphNode_t fill_sight_node;
         cudaGraphAddNode(&fill_sight_node, *graph, {&actions_node}, 1, &fill_sight_params);
 
         cudaGraphNodeParams fill_shadows_params = { cudaGraphNodeTypeKernel };
         void* fill_shadows_input[] = {&data};
-        fill_shadows_params.kernel = {
-            .func = fillShadows,
-            .gridDim = dim3((size - 1) / 1024 + 1),
-            .blockDim = dim3(1024),
-            .kernelParams = fill_shadows_input
-        };
+        fill_shadows_params.kernel.func = fillShadows;
+        fill_shadows_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
+        fill_shadows_params.kernel.blockDim = dim3(1024);
+        fill_shadows_params.kernel.kernelParams = fill_shadows_input;
         cudaGraphNode_t fill_shadows_node;
         cudaGraphAddNode(&fill_shadows_node, *graph, {&fill_sight_node}, 1, &fill_shadows_params);
 
         cudaGraphNodeParams reset_update_params = { cudaGraphNodeTypeKernel };
         void* reset_update_input[] = {&data, &reset_handle};
-        reset_update_params.kernel = {
-            .func = updateResetHandle,
-            .gridDim = dim3(1),
-            .blockDim = dim3(1),
-            .kernelParams = reset_update_input
-        };
+        reset_update_params.kernel.func = updateResetHandle;
+        reset_update_params.kernel.gridDim = dim3(1);
+        reset_update_params.kernel.blockDim = dim3(1);
+        reset_update_params.kernel.kernelParams = reset_update_input;
         cudaGraphNode_t reset_update_node;
         cudaGraphAddNode(&reset_update_node, *graph, {&actions_node}, 1, &reset_update_params);
 
         cudaGraphNodeParams reset_cond_params = { cudaGraphNodeTypeConditional };
-        reset_cond_params.conditional = {
-            .handle = reset_handle,
-            .type = cudaGraphCondTypeIf,
-            .size = 1
-        };
+        reset_cond_params.conditional.handle = reset_handle;
+        reset_cond_params.conditional.type = cudaGraphCondTypeIf;
+        reset_cond_params.conditional.size = 1;
         cudaGraphNode_t reset_cond_node;
         cudaGraphNode_t reset_cond_dependencies[] = {fill_shadows_node, reset_update_node}; 
         cudaGraphAddNode(&reset_cond_node, *graph, reset_cond_dependencies, 2, &reset_cond_params);
@@ -1605,12 +1581,10 @@ namespace Simulator {
 
         cudaGraphNodeParams reset_params = { cudaGraphNodeTypeKernel };
         void* reset_args[] = {&data_base, &data};
-        reset_params.kernel = {
-            .func = Simulator::copyDeviceToDevice,
-            .gridDim = dim3(1),
-            .blockDim = dim3(1),
-            .kernelParams = reset_args
-        };
+        reset_params.kernel.func = Simulator::copyDeviceToDevice;
+        reset_params.kernel.gridDim = dim3(1);
+        reset_params.kernel.blockDim = dim3(1);
+        reset_params.kernel.kernelParams = reset_args;
         cudaGraphNode_t reset_node;
         cudaGraphAddNode(&reset_node, reset_cond_graph, NULL, 0, &reset_params);
     }

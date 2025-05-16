@@ -189,12 +189,10 @@ namespace AI {
 
         cudaGraphNodeParams compute_acquire_params = { cudaGraphNodeTypeKernel };
         void* compute_acquire_args[] = {&data->ai_shared};
-        compute_acquire_params.kernel = {
-            .func = acquireComputeUpstream,
-            .gridDim = dim3(1, 1, 1),
-            .blockDim = dim3(1, 1, 1),
-            .kernelParams = compute_acquire_args
-        };
+        compute_acquire_params.kernel.func = acquireComputeUpstream;
+        compute_acquire_params.kernel.gridDim = dim3(1, 1, 1);
+        compute_acquire_params.kernel.blockDim = dim3(1, 1, 1);
+        compute_acquire_params.kernel.kernelParams = compute_acquire_args;
         cudaGraphNode_t compute_acquire_node;
         cudaGraphAddNode(&compute_acquire_node, *graph, NULL, 0, &compute_acquire_params);
 
@@ -223,12 +221,10 @@ namespace AI {
 
         cudaGraphNodeParams write_acquire_params = { cudaGraphNodeTypeKernel };
         void* write_acquire_args[] = {&data->ai_shared};
-        write_acquire_params.kernel = {
-            .func = acquireWriteUpstream,
-            .gridDim = dim3(1, 1, 1),
-            .blockDim = dim3(1, 1, 1),
-            .kernelParams = write_acquire_args
-        };
+        write_acquire_params.kernel.func = acquireWriteUpstream;
+        write_acquire_params.kernel.gridDim = dim3(1, 1, 1);
+        write_acquire_params.kernel.blockDim = dim3(1, 1, 1);
+        write_acquire_params.kernel.kernelParams = write_acquire_args;
         cudaGraphNode_t write_acquire_node;
         cudaGraphAddNode(&write_acquire_node, *graph, NULL, 0, &write_acquire_params);
 
@@ -236,33 +232,27 @@ namespace AI {
 
         cudaGraphNodeParams write_release_params = { cudaGraphNodeTypeKernel };
         void* write_release_args[] = {&data->ai_shared};
-        write_release_params.kernel = {
-            .func = releaseWriteUpstream,
-            .gridDim = dim3(1, 1, 1),
-            .blockDim = dim3(1, 1, 1),
-            .kernelParams = write_release_args
-        };
+        write_release_params.kernel.func = releaseWriteUpstream;
+        write_release_params.kernel.gridDim = dim3(1, 1, 1);
+        write_release_params.kernel.blockDim = dim3(1, 1, 1);
+        write_release_params.kernel.kernelParams = write_release_args;
         cudaGraphNode_t write_release_node;
         cudaGraphAddNode(&write_release_node, *graph, NULL, 0, &write_release_params);
 
         cudaGraphNodeParams update_cond_params = { cudaGraphNodeTypeConditional };
-        update_cond_params.conditional = {
-            .handle = update_handle,
-            .type = cudaGraphCondTypeIf,
-            .size = 1,
-        };
+        update_cond_params.conditional.handle = update_handle;
+        update_cond_params.conditional.type = cudaGraphCondTypeIf;
+        update_cond_params.conditional.size = 1;
         cudaGraphNode_t update_cond_node;
         cudaGraphAddNode(&update_cond_node, *graph, {&write_release_node}, 1, &update_cond_params);
         cudaGraph_t update_cond_graph = update_cond_params.conditional.phGraph_out[0];
 
         cudaGraphNodeParams compute_acquire_all_params = { cudaGraphNodeTypeKernel };
         void* compute_acquire_all_args[] = {&data->ai_shared};
-        compute_acquire_all_params.kernel = {
-            .func = acquireAllComputeUpstream,
-            .gridDim = dim3(1, 1, 1),
-            .blockDim = dim3(1, 1, 1),
-            .kernelParams = compute_acquire_all_args
-        };
+        compute_acquire_all_params.kernel.func = acquireAllComputeUpstream;
+        compute_acquire_all_params.kernel.gridDim = dim3(1, 1, 1);
+        compute_acquire_all_params.kernel.blockDim = dim3(1, 1, 1);
+        compute_acquire_all_params.kernel.kernelParams = compute_acquire_all_args;
         cudaGraphNode_t compute_acquire_all_node;
         cudaGraphAddNode(&compute_acquire_all_node, update_cond_graph, NULL, 0, &compute_acquire_all_params);
 
@@ -270,23 +260,19 @@ namespace AI {
 
         cudaGraphNodeParams compute_release_all_params = { cudaGraphNodeTypeKernel };
         void* compute_release_all_args[] = {&data->ai_shared};
-        compute_release_all_params.kernel = {
-            .func = releaseAllComputeUpstream,
-            .gridDim = dim3(1, 1, 1),
-            .blockDim = dim3(1, 1, 1),
-            .kernelParams = compute_release_all_args
-        };
+        compute_release_all_params.kernel.func = releaseAllComputeUpstream;
+        compute_release_all_params.kernel.gridDim = dim3(1, 1, 1);
+        compute_release_all_params.kernel.blockDim = dim3(1, 1, 1);
+        compute_release_all_params.kernel.kernelParams = compute_release_all_args;
         cudaGraphNode_t compute_release_all_node;
         cudaGraphAddNode(&compute_release_all_node, update_cond_graph, NULL, 0, &compute_release_all_params);
 
         cudaGraphNodeParams compute_release_params = { cudaGraphNodeTypeKernel };
         void* compute_release_args[] = {&data->ai_shared};
-        compute_release_params.kernel = {
-            .func = releaseComputeUpstream,
-            .gridDim = dim3(1, 1, 1),
-            .blockDim = dim3(1, 1, 1),
-            .kernelParams = compute_release_args
-        };
+        compute_release_params.kernel.func = releaseComputeUpstream;
+        compute_release_params.kernel.gridDim = dim3(1, 1, 1);
+        compute_release_params.kernel.blockDim = dim3(1, 1, 1);
+        compute_release_params.kernel.kernelParams = compute_release_args;
         cudaGraphNode_t compute_release_node;
         cudaGraphAddNode(&compute_release_node, *graph, {&update_cond_node}, 1, &compute_release_params);
     }

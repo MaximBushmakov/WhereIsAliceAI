@@ -16,19 +16,19 @@ gif-h:
 lib: libheatmap lodepng gif-h
 
 make_folders:
-	-makedir "./lib"
-	-makedir "./build"
-	-makedir "./build/obj"
-	-makedir "./build/exe"
-	-makedir "./out"
+	-mkdir "./lib"
+	-mkdir "./build"
+	-mkdir "./build/obj"
+	-mkdir "./build/exe"
+	-mkdir "./out"
 
 init: make_folders lib
 
 clear:
 	rd /s /q "./lib/" "./build/" "./out/"
 
-clear_linux:
-	rm -r "./lib/" "./build/" "./out/"
+clear_linus:
+	rm -rf -d "./lib/" "./build/" "./out/"
 
 ./build/obj/character.obj: character.cu character.h
 	nvcc -dc $(NVCC_FLAGS) character.cu -o ./build/obj/character.obj
