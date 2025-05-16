@@ -16,16 +16,19 @@ gif-h:
 lib: libheatmap lodepng gif-h
 
 make_folders:
-	-md "./lib"
-	-md "./build"
-	-md "./build/obj"
-	-md "./build/exe"
-	-md "./out"
+	-makedir "./lib"
+	-makedir "./build"
+	-makedir "./build/obj"
+	-makedir "./build/exe"
+	-makedir "./out"
 
 init: make_folders lib
 
 clear:
 	rd /s /q "./lib/" "./build/" "./out/"
+
+clear_linux:
+	rm -r "./lib/" "./build/" "./out/"
 
 ./build/obj/character.obj: character.cu character.h
 	nvcc -dc $(NVCC_FLAGS) character.cu -o ./build/obj/character.obj
@@ -76,3 +79,20 @@ test: ./build/exe/test.exe
 
 test_debug: ./build/exe/test_debug.exe
 	./build/exe/test_debug.exe
+
+./build/obj/character.o: character.cu character.h
+	nvcc -dc $(NVCC_FLAGS) character.cu -o ./build/obj/character.o
+
+./build/obj/simulator.o: simulator.cu simulator_data.h simulator_methods.h
+	nvcc -dc $(NVCC_FLAGS) simulator.cu -o ./build/obj/simulator.o
+
+./build/obj/ai.o: ai.cu ai_data.h ai_methods.h
+	nvcc -dc $(NVCC_FLAGS) ai.cu -o ./build/obj/ai.o
+
+./build/obj/test.o: test.cu
+	nvcc -dc $(NVCC_FLAGS) $(TEST_LIBS) test.cu -o ./build/obj/test.o
+
+./build/exe/test.out: ./build/obj/character.o ./build/obj/simulator.o ./build/obj/ai.obj ./build/obj/test.o
+	nvcc $(NVCC_FLAGS) $(TEST_LIBS) $(TEST_FILES) ./build/obj/character.o ./build/obj/simulator.o ./build/obj/ai.o ./build/obj/test.o -o ./build/exe/test.out
+
+test_linux: ./build/exe/test.out

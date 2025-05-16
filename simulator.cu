@@ -362,8 +362,8 @@ namespace Simulator {
     }
 
     __device__ __inline__ bool monsterUpdatePosition(Data* data, Agent* agent, ObjectType type, float2 coords_dest) {
-        uint2 coords_round = {(uint) floorf(agent->coords.x) - 1, (uint) floorf(agent->coords.y) - 1};
-        uint2 coords_dest_round = {(uint) floorf(coords_dest.x) - 1, (uint) floorf(coords_dest.y) - 1};
+        uint2 coords_round = {(uint) floor(agent->coords.x) - 1, (uint) floor(agent->coords.y) - 1};
+        uint2 coords_dest_round = {(uint) floor(coords_dest.x) - 1, (uint) floor(coords_dest.y) - 1};
 
         if (coords_dest_round.x == coords_round.x && coords_dest_round.y == coords_round.y) {
             agent->coords = coords_dest;
@@ -425,8 +425,8 @@ namespace Simulator {
         delta_rand = {min(dist/6, max(-dist/6, delta_rand.x)), min(dist/6, max(-dist/6, delta_rand.y))};
         float2 sound_coords = {astral->coords.x + delta_rand.x, astral->coords.y + delta_rand.y};
         uint2 sound_coords_round;
-        sound_coords_round.x = min(data->width, max(0, (uint) floorf(sound_coords.x)));
-        sound_coords_round.y = min(data->height, max(0, (uint) floorf(sound_coords.y)));
+        sound_coords_round.x = min(data->width, max(0, (uint) floor(sound_coords.x)));
+        sound_coords_round.y = min(data->height, max(0, (uint) floor(sound_coords.y)));
         uint sound_ind = sound_coords_round.y * data->width + sound_coords_round.x;
         *data->player_tensor.getHearing(sound_ind) = 1.f;
         if (astral->ability_cooldown < 8) {
@@ -571,8 +571,8 @@ namespace Simulator {
         delta_rand = {min(dist/6, max(-dist/6, delta_rand.x)), min(dist/6, max(-dist/6, delta_rand.y))};
         float2 sound_coords = {cultist->coords.x + delta_rand.x, cultist->coords.y + delta_rand.y};
         uint2 sound_coords_round;
-        sound_coords_round.x = min(data->width, max(0, (uint) floorf(sound_coords.x)));
-        sound_coords_round.y = min(data->height, max(0, (uint) floorf(sound_coords.y)));
+        sound_coords_round.x = min(data->width, max(0, (uint) floor(sound_coords.x)));
+        sound_coords_round.y = min(data->height, max(0, (uint) floor(sound_coords.y)));
         uint sound_ind = sound_coords_round.y * data->width + sound_coords_round.x;
         *data->player_tensor.getHearing(sound_ind) = 1.f;
         if (cultist->cooldown == 0) {
@@ -594,7 +594,7 @@ namespace Simulator {
         if (cultist->ability_cooldown == 0) {
             return;
         }
-        int2 coords_round = {(int) floorf(cultist->ability_coords.x), (int) floorf(cultist->ability_coords.y)};
+        int2 coords_round = {(int) floor(cultist->ability_coords.x), (int) floor(cultist->ability_coords.y)};
         for (uint y = max(coords_round.y - 20, 0); y <= min(coords_round.y + 20, data->height - 1); ++y) {
             for (uint x = max(coords_round.x - 20, 0); x <= min(coords_round.x + 20, data->width - 1); ++x) {
                 float2 delta = {x - cultist->ability_coords.x, y - cultist->ability_coords.y};
@@ -671,7 +671,7 @@ namespace Simulator {
             }
         }
 
-        ObjectType type = data->object_map[(uint) floorf(cultist->coords.y) * data->width + (uint) floorf(cultist->coords.x)];
+        ObjectType type = data->object_map[(uint) floor(cultist->coords.y) * data->width + (uint) floor(cultist->coords.x)];
         if (cultist->cooldown > 0 && type == ObjectType::Cultist) {
             monsterUpdatePosition(data, (Agent*) cultist, ObjectType::CultistChant, cultist->coords);
         } else if (cultist->cooldown == 0 && type == ObjectType::CultistChant) {
@@ -702,8 +702,8 @@ namespace Simulator {
     }
 
     __device__ bool playerUpdatePosition(Data* data, Player* player, float2 coords_dest) {
-        uint2 coords_round = {(uint) floorf(player->coords.x - 0.5f), (uint) floorf(player->coords.y - 0.5f)};
-        uint2 coords_dest_round = {(uint) floorf(coords_dest.x - 0.5f), (uint) floorf(coords_dest.y - 0.5f)};
+        uint2 coords_round = {(uint) floor(player->coords.x - 0.5f), (uint) floor(player->coords.y - 0.5f)};
+        uint2 coords_dest_round = {(uint) floor(coords_dest.x - 0.5f), (uint) floor(coords_dest.y - 0.5f)};
 
         bool success = true;
         bool no_monsters = true;
@@ -762,7 +762,7 @@ namespace Simulator {
                 float2 delta = {player->coords.x - cultist->coords.x, player->coords.y - cultist->coords.y};
                 float dist = sqrt(delta.x * delta.x + delta.y * delta.y);
                 if (dist <= player->sound_radius) {
-                    uint sound_ind = floorf(player->coords.y) * data->width + floorf(player->coords.x);
+                    uint sound_ind = floor(player->coords.y) * data->width + floor(player->coords.x);
                     *data->monsters_tensor.getHearing(sound_ind) = 1.f;
                     *data->monsters_tensor.getObject(sound_ind) = Utils::getValue<ObjectType>(ObjectType::Player);
                     cultist->noise = min(cultist->noise + 0.3f, 1.f);
@@ -1044,7 +1044,7 @@ namespace Simulator {
             }
         }
 
-        uint2 coords_round = {(uint) floorf(player->coords.x - 0.5f), (uint) floorf(player->coords.y - 0.5f)};
+        uint2 coords_round = {(uint) floor(player->coords.x - 0.5f), (uint) floor(player->coords.y - 0.5f)};
         uint lighting = 0;
         for (uint y = 0; y < 2; ++y) {    
             for (uint x = 0; x < 2; ++x) {
@@ -1084,7 +1084,7 @@ namespace Simulator {
         for (uint id = 0; id < data->interactables_size; ++id) {
             data->interactables_mask[id] = false;
         }
-        int2 coords_round = {(int) floorf(player->coords.x), (int) floorf(player->coords.y)};
+        int2 coords_round = {(int) floor(player->coords.x), (int) floor(player->coords.y)};
         for (uint y = max(0, coords_round.y - 3); y <= min(data->height - 1, coords_round.y + 3); ++y) {
             for (uint x = max(0, coords_round.x - 3); x <= min(data->width - 1, coords_round.x + 3); ++x) {
                 uint i = y * data->width + x;
@@ -1846,7 +1846,7 @@ namespace Simulator {
 
             switch (type) {
             case Character::Type::Astral: {
-                uint2 coords_round = {(uint) std::floorf(agent->coords.x) - 1, (uint) std::floorf(agent->coords.y) - 1};
+                uint2 coords_round = {(uint) std::floor(agent->coords.x) - 1, (uint) std::floor(agent->coords.y) - 1};
                 for (uint y = 0; y < 3; ++y) {
                     for (uint x = 0; x < 3; ++x) {
                         uint ind = (coords_round.y + y) * data->width + (coords_round.x + x);
@@ -1856,7 +1856,7 @@ namespace Simulator {
                 break;
             }
             case Character::Type::Cultist: {
-                uint2 coords_round = {(uint) std::floorf(agent->coords.x) - 1, (uint) std::floorf(agent->coords.y) - 1};
+                uint2 coords_round = {(uint) std::floor(agent->coords.x) - 1, (uint) std::floor(agent->coords.y) - 1};
                 for (uint y = 0; y < 3; ++y) {
                     for (uint x = 0; x < 3; ++x) {
                         uint ind = (coords_round.y + y) * data->width + (coords_round.x + x);
@@ -1866,7 +1866,7 @@ namespace Simulator {
                 break;
             }
             case Character::Type::Player: {
-                uint2 coords_round = {(uint) std::floorf(agent->coords.x - 0.5f), (uint) std::floorf(agent->coords.y - 0.5f)};
+                uint2 coords_round = {(uint) std::floor(agent->coords.x - 0.5f), (uint) std::floor(agent->coords.y - 0.5f)};
                 for (uint y = 0; y < 2; ++y) {
                     for (uint x = 0; x < 2; ++x) {
                         uint ind = (coords_round.y + y) * data->width + (coords_round.x + x);

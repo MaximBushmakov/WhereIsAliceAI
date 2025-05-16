@@ -29,16 +29,16 @@ namespace Character {
             data[3] = __float2half_rn(coords.y - std::floor(coords.y));
         }
         __device__ __forceinline__ void updateCoordsDevice() {
-            data[0] = __float2half_rn(floorf(coords.x) / 300);
-            data[1] = __float2half_rn(coords.x - floorf(coords.x));
-            data[2] = __float2half_rn(floorf(coords.y) / 150);
-            data[3] = __float2half_rn(coords.y - floorf(coords.y));
+            data[0] = __float2half_rn(floor(coords.x) / 300);
+            data[1] = __float2half_rn(coords.x - floor(coords.x));
+            data[2] = __float2half_rn(floor(coords.y) / 150);
+            data[3] = __float2half_rn(coords.y - floor(coords.y));
         }
 
         // radians -> sin cos
         __host__ __forceinline__ void updateRotationHost() {
-            data[4] = __float2half_rn(std::sinf(M_PI * rotation));
-            data[5] = __float2half_rn(std::cosf(M_PI * rotation));
+            data[4] = __float2half_rn(std::sin(M_PI * rotation));
+            data[5] = __float2half_rn(std::cos(M_PI * rotation));
         }
         __device__ __forceinline__ void updateRotationDevice() {
             data[4] = __float2half_rn(sinpif(rotation));
