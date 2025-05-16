@@ -1,7 +1,8 @@
-NVCC_FLAGS=--std=c++20 -lcudnn -Icccl/libcudacxx/include -arch=native
+# NVCC_FLAGS=--std=c++20 -Icccl/libcudacxx/include -gencode=arch=compute_70,code=sm_70 -gencode=arch=compute_70,code=compute_70 -gencode=arch=compute_75,code=sm_75 -gencode=arch=compute_75,code=compute_75 -gencode=arch=compute_80,code=sm_80 -gencode=arch=compute_80,code=compute_80 -gencode=arch=compute_89,code=sm_89 -gencode=arch=compute_89,code=compute_89 -gencode=arch=compute_100,code=sm_100 -gencode=arch=compute_100,code=compute_100 -gencode=arch=compute_120,code=sm_120 -gencode=arch=compute_120,code=compute_120 
+NVCC_FLAGS=--std=c++20 -Icccl/libcudacxx/include -arch=native
 TEST_C_FLAGS=/Od -fsanitize=address
-TEST_LIBS=-I$(CURDIR)/lib/libheatmap -I$(CURDIR)/lib/lodepng
-TEST_FILES=./lib/lodepng/lodepng.cpp ./lib/libheatmap/heatmap.c ./lib/libheatmap/colorschemes/Spectral.c
+TEST_LIBS=-I$(CURDIR)/lib/libheatmap -I$(CURDIR)/lib/lodepng -I$(CURDIR)/lib/gif-h
+TEST_FILES=./lib/lodepng/lodepng.cpp ./lib/libheatmap/heatmap.c ./lib/libheatmap/colorschemes/Spectral.c ./lib/libheatmap/colorschemes/gray.c
 
 libheatmap:
 	-git clone https://github.com/lucasb-eyer/libheatmap.git $(CURDIR)/lib/libheatmap
@@ -9,14 +10,17 @@ libheatmap:
 lodepng:
 	-git clone https://github.com/lvandeve/lodepng.git $(CURDIR)/lib/lodepng
 
-lib: libheatmap lodepng
+gif-h:
+	-git clone https://github.com/charlietangora/gif-h $(CURDIR)/lib/gif-h
+
+lib: libheatmap lodepng gif-h
 
 make_folders:
-	md "./lib"
-	md "./build"
-	md "./build/obj"
-	md "./build/exe"
-	md "./out"
+	-md "./lib"
+	-md "./build"
+	-md "./build/obj"
+	-md "./build/exe"
+	-md "./out"
 
 init: make_folders lib
 

@@ -45,7 +45,7 @@ namespace Character {
         sight_radius = 300.f;
         sound_radius = 0.f;
         hearing_radius = 65.f;
-        movement_state = MovementState::Walk;
+        movement_state = MovementState::Crouch;
         speed = 0.375f;
         magic_cooldown_see = 0;
         magic_cooldown_invisibility = 0;

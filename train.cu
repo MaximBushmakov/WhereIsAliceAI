@@ -6,9 +6,6 @@
 #include "thread_methods.h"
 #include "utils.h"
 
-// neural network
-#include "cudnn.h"
-
 // curand on device
 #include <curand_kernel.h>
 
@@ -104,47 +101,54 @@ void runAll() {
     cudaGraph_t graph;
     cudaGraphCreate(&graph, 0);
 
+    cudaGraph_t empty_graph;
+    cudaGraphCreate(&empty_graph, 0);
+
     for (uint thread_id = 0; thread_id < threads_num; ++thread_id) {
 
         cudaGraph_t body_graph = whileTime(work_time * (ull) 1e9, graph);
 
         // forward step
-        cudaGraph_t forward_graph = AI::forwardStep(data[thread_id]);
         cudaGraphNode_t forward_node;
-        cudaGraphAddChildGraphNode(&forward_node, body_graph, NULL, 0, forward_graph);
+        cudaGraphAddChildGraphNode(&forward_node, body_graph, NULL, 0, empty_graph);
+        cudaGraph_t forward_graph;
+        cudaGraphChildGraphNodeGetGraph(forward_node, &forward_graph);
+        AI::forwardStep(&forward_graph, data[thread_id]);
+        
         cudaGraphDestroy(forward_graph);
 
         // simulator step
-        cudaGraphConditionalHandle reset_handle;
-        cudaGraphConditionalHandleCreate(&reset_handle, body_graph, 0, cudaGraphCondAssignDefault);
-        cudaGraph_t simulator_graph = Simulator::step(data[thread_id]->simulator, size, reset_handle);
         cudaGraphNode_t simulator_node;
-        cudaGraphAddChildGraphNode(&simulator_node, body_graph, {&forward_node}, 1, simulator_graph);
-        cudaGraphDestroy(simulator_graph);
+        cudaGraphAddChildGraphNode(&simulator_node, body_graph, {&forward_node}, 1, empty_graph);
+        cudaGraph_t simulator_graph;
+        cudaGraphChildGraphNodeGetGraph(simulator_node, &simulator_graph);
+        Simulator::stepReset(&simulator_graph, data[thread_id]->simulator, size, reset_handle);
 
         // backward step
-        cudaGraph_t backward_graph = AI::backwardStep(data[thread_id]);
         cudaGraphNode_t backward_node;
-        cudaGraphAddChildGraphNode(&backward_node, body_graph, {&simulator_node}, 1, backward_graph);
-        cudaGraphDestroy(backward_graph);
+        cudaGraphAddChildGraphNode(&backward_node, body_graph, {&simulator_node}, 1, empty_graph);
+        cudaGraph_t backward_graph;
+        cudaGraphChildGraphNodeGetGraph(backward_node, &backward_graph);
+        AI::backwardStep(&backward_graph, data[thread_id]);
 
         // if reached end of simulation: reset simulator
         cudaGraphNodeParams reset_cond_params = { cudaGraphNodeTypeConditional };
         reset_cond_params.conditional = {
-            .handle = reset_handle;
-            .type = cudaGraphCondTypeIf;
-            .size = 1;
-        }
+            .handle = reset_handle,
+            .type = cudaGraphCondTypeIf,
+            .size = 1
+        };
         cudaGraphNode_t reset_cond_node;
         cudaGraphAddNode(&reset_cond_node, body_graph, {&backward_node}, 1, &reset_cond_params);
         cudaGraph_t reset_cond_graph = reset_cond_params.conditional.phGraph_out[0];
 
         cudaGraphNodeParams reset_params = { cudaGraphNodeTypeKernel };
+        void* reset_args[] = {&data, &data_base};
         reset_params.kernel = {
             .func = Simulator::copyDeviceToDevice,
-            .gridDim = dim3(1, 1, 1),
-            .blockDim = dim3(1, 1, 1),
-            .kernelParams = {&data[thread_id].simulator_base, &data[thread_id].simulator}
+            .gridDim = dim3(1),
+            .blockDim = dim3(1),
+            .kernelParams = reset_args
         };
         cudaGraphNode_t reset_node;
         cudaGraphAddNode(&reset_node, reset_cond_graph, NULL, 0, &reset_params);

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "cuda_fp16.h"
-#include "cudnn.h"
+//#include "cudnn.h"
 #include "curand_kernel.h"
 #include <iostream>
 
@@ -10,14 +10,15 @@ using uint2_pair = std::pair<uint2, uint2>;
 using float2_pair = std::pair<float2, float2>;
 using ull = unsigned long long;
 
-__host__ __forceinline__ void checkCuda(cudaError_t err) {
-    if (err != cudaSuccess) {
-        std::cerr << "cuda error at " << __FILE__ << ":" << __LINE__ + 1
-            << "\n" << cudaGetErrorString(err) << " (" << err << ")";
-        std::exit(1);
-    }
-}
+#define checkCuda(err) {\
+    if (err != cudaSuccess) { \
+        std::cerr << "cuda error at " << __FILE__ << ":" << __LINE__ \
+            << "\n" << cudaGetErrorString(err) << " (" << err << ")" << "\n"; \
+        std::exit(1); \
+    } \
+} \
 
+/*
 __host__ __forceinline__ void checkCuDNN(cudnnStatus_t err) {
     if (err != CUDNN_STATUS_SUCCESS) {
         std::cerr << "cudnn error at " << __FILE__ << ":" << __LINE__ + 1
@@ -25,6 +26,7 @@ __host__ __forceinline__ void checkCuDNN(cudnnStatus_t err) {
         std::exit(1);
     }
 }
+*/
 
 namespace Utils {
 

@@ -4,10 +4,11 @@
 #include "utils.h"
 
 #include <random>
-#include "cudnn.h"
+// #include "cudnn.h"
 
 namespace AI {
 
+    /*
     cudnnBackendDescriptor_t tensor3D(int64_t n, int64_t m, int64_t k, int64_t uid, cudnnDataType_t dtype = CUDNN_DATA_HALF, int64_t alignment = 64) {
         cudnnBackendDescriptor_t desc;
         checkCuDNN(cudnnBackendCreateDescriptor(CUDNN_BACKEND_TENSOR_DESCRIPTOR, &desc));
@@ -38,6 +39,7 @@ namespace AI {
 
         return matmul_oper;
     }
+    */
 
     __global__ void initSyncUpstream(DataShared* data) {
         data->sync.compute = new cuda::counting_semaphore<cuda::thread_scope_device, 256>(0);
@@ -183,10 +185,7 @@ namespace AI {
         return data_device;
     }
 
-    cudaGraph_t trainForwardStep(Thread::Data* data) {
-        cudaGraph_t graph;
-        cudaGraphCreate(&graph, 0);
-
+    void trainForwardStep(cudaGraph_t* graph, Thread::Data* data) {
 
         cudaGraphNodeParams compute_acquire_params = { cudaGraphNodeTypeKernel };
         void* compute_acquire_args[] = {&data->ai_shared};
@@ -197,7 +196,7 @@ namespace AI {
             .kernelParams = compute_acquire_args
         };
         cudaGraphNode_t compute_acquire_node;
-        cudaGraphAddNode(&compute_acquire_node, graph, NULL, 0, &compute_acquire_params);
+        cudaGraphAddNode(&compute_acquire_node, *graph, NULL, 0, &compute_acquire_params);
 
         // user: implement forward pass of training
         // all operations done before simulator update
@@ -208,19 +207,15 @@ namespace AI {
         auto [forward_handle, forward_plan, forward_varpack] = ...;
         cudnnBackendPopulateCudaGraph(forward_handle, forward_plan, forward_varpack, forward_graph);
         cudaGraphNode_t forward_node;
-        cudaGraphAddChildGraphNode(&forward_node, graph, NULL, 0, forward_graph);
+        cudaGraphAddChildGraphNode(&forward_node, *graph, NULL, 0, forward_graph);
         cudaGraphDestroy(forward_graph);
         */
-
-        return graph;
     }
 
-    cudaGraph_t trainBackwardStep(Thread::Data* data) {
-        cudaGraph_t graph;
-        cudaGraphCreate(&graph, 0);
+    void trainBackwardStep(cudaGraph_t* graph, Thread::Data* data) {
 
         cudaGraphConditionalHandle update_handle;
-        cudaGraphConditionalHandleCreate(&update_handle, graph, 0, cudaGraphCondAssignDefault);
+        cudaGraphConditionalHandleCreate(&update_handle, *graph, 0, cudaGraphCondAssignDefault);
 
         // user: implement backward pass of training
         // all operations done after simulator update
@@ -235,7 +230,7 @@ namespace AI {
             .kernelParams = write_acquire_args
         };
         cudaGraphNode_t write_acquire_node;
-        cudaGraphAddNode(&write_acquire_node, graph, NULL, 0, &write_acquire_params);
+        cudaGraphAddNode(&write_acquire_node, *graph, NULL, 0, &write_acquire_params);
 
         // user: implement update
 
@@ -248,7 +243,7 @@ namespace AI {
             .kernelParams = write_release_args
         };
         cudaGraphNode_t write_release_node;
-        cudaGraphAddNode(&write_release_node, graph, NULL, 0, &write_release_params);
+        cudaGraphAddNode(&write_release_node, *graph, NULL, 0, &write_release_params);
 
         cudaGraphNodeParams update_cond_params = { cudaGraphNodeTypeConditional };
         update_cond_params.conditional = {
@@ -257,7 +252,7 @@ namespace AI {
             .size = 1,
         };
         cudaGraphNode_t update_cond_node;
-        cudaGraphAddNode(&update_cond_node, graph, {&write_release_node}, 1, &update_cond_params);
+        cudaGraphAddNode(&update_cond_node, *graph, {&write_release_node}, 1, &update_cond_params);
         cudaGraph_t update_cond_graph = update_cond_params.conditional.phGraph_out[0];
 
         cudaGraphNodeParams compute_acquire_all_params = { cudaGraphNodeTypeKernel };
@@ -293,8 +288,6 @@ namespace AI {
             .kernelParams = compute_release_args
         };
         cudaGraphNode_t compute_release_node;
-        cudaGraphAddNode(&compute_release_node, graph, {&update_cond_node}, 1, &compute_release_params);
-
-        return graph;
+        cudaGraphAddNode(&compute_release_node, *graph, {&update_cond_node}, 1, &compute_release_params);
     }
 }

@@ -221,7 +221,6 @@ namespace Character {
             UseDoor,
 
             MagicSee,
-            MagicLight,
             MagicInvisibility,
             MagicInaudibility,
 
@@ -237,7 +236,6 @@ namespace Character {
 
         enum class Magic : uint {
             See,
-            // Light,
             Invisibility,
             Inaudibility
         };

@@ -8,6 +8,6 @@ namespace AI {
     __host__ DataShared* initShared();
     __host__ DataCopied* initCopied(Simulator::Data* simulator, DataShared* data_shared);
 
-    cudaGraph_t trainForwardStep(Thread::Data* data);
-    cudaGraph_t trainBackwardStep(Thread::Data* data);
+    void trainForwardStep(cudaGraph_t* graph, Thread::Data* data);
+    void trainBackwardStep(cudaGraph_t* graph, Thread::Data* data);
 }

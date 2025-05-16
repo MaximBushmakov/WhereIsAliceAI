@@ -9,9 +9,9 @@ namespace Simulator {
     __host__ Data* copyHostToDevice(Data* data_orig);
     __host__ Data* copyDeviceToHost(Data* data_orig);
     __host__ void deleteHost(Data* data);
-    __device__ void copyDeviceToDevice(Data* data_orig, Data* data_dest);
+    __global__ void copyDeviceToDevice(Data* data_orig, Data* data_dest);
     __host__ void deleteDevice(Data* data);
 
-    __host__ cudaGraph_t step(Data* data, uint size);
-    __host__ cudaGraph_t step(Data* data, uint size, cudaGraphConditionalHandle reset_handle);
+    __host__ void step(cudaGraph_t* graph, Data* data, uint size);
+    __host__ void stepReset(cudaGraph_t* graph, Data* data, Data* data_base, uint size);
 }

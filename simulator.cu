@@ -238,7 +238,7 @@ namespace Simulator {
         free(data);
     }
 
-    __device__ void copyDeviceToDevice(Data* data_orig, Data* data_dest) {
+    __global__ void copyDeviceToDevice(Data* data_orig, Data* data_dest) {
         memcpy(data_dest->player_tensor.data, data_orig->player_tensor.data, 5 * data_orig->height * data_orig->width * sizeof(half));
         memcpy(data_dest->monsters_tensor.data, data_orig->monsters_tensor.data, 5 * data_orig->height * data_orig->width * sizeof(half));
         memcpy(data_dest->player_hearing_map, data_orig->player_hearing_map, data_orig->height * data_orig->width * sizeof(half));
@@ -358,6 +358,7 @@ namespace Simulator {
         data->madness += madness;
         data->health -= max(data->madness - 100.f, 0.f);
         data->madness = min(data->madness, 100.f);
+        data->madness = max(data->madness, 0.f);
     }
 
     __device__ __inline__ bool monsterUpdatePosition(Data* data, Agent* agent, ObjectType type, float2 coords_dest) {
@@ -473,18 +474,30 @@ namespace Simulator {
                 break;
             case Astral::Action::TurnRightFull:
                 astral->rotation = fmodf(astral->rotation - Astral::rotation_speed, 2.f);
+                if (astral->rotation < 0.f) {
+                    astral->rotation += 2.f;
+                }
                 success = true;
                 break;
             case Astral::Action::TurnRightHalf:
                 astral->rotation = fmodf(astral->rotation - Astral::rotation_speed / 2, 2.f);
+                if (astral->rotation < 0.f) {
+                    astral->rotation += 2.f;
+                }
                 success = true;
                 break;
             case Astral::Action::TurnLeftFull:
                 astral->rotation = fmodf(astral->rotation + Astral::rotation_speed, 2.f);
+                if (astral->rotation < 0.f) {
+                    astral->rotation += 2.f;
+                }
                 success = true;
                 break;
             case Astral::Action::TurnLeftHalf:
                 astral->rotation = fmodf(astral->rotation + Astral::rotation_speed / 2, 2.f);
+                if (astral->rotation < 0.f) {
+                    astral->rotation += 2.f;
+                }
                 success = true;
                 break;
             case Astral::Action::Ability:
@@ -540,7 +553,10 @@ namespace Simulator {
             delta_rot = delta_rot + 1.f;
         }
         delta_rot = fmodf(delta_rot - astral->rotation, 2.f);
-        astral->attack_player = (delta.x * delta.x + delta.y * delta.y <= 4 * 4) & (delta_rot < 1./3 || delta_rot > 2. - 1./3);
+        if (delta_rot < 0.f) {
+            delta_rot += 2.f;
+        }
+        astral->attack_player = (delta.x * delta.x + delta.y * delta.y <= 4 * 4) && (delta_rot < 1./3 || delta_rot > 2. - 1./3);
     }
 
     __device__ __forceinline__ void cultistMakeSound(Data* data, Cultist* cultist) {
@@ -579,10 +595,10 @@ namespace Simulator {
             return;
         }
         int2 coords_round = {(int) floorf(cultist->ability_coords.x), (int) floorf(cultist->ability_coords.y)};
-        for (uint y = max(coords_round.y - 2, 0); y <= min(coords_round.y + 2, data->height - 1); ++y) {
-            for (uint x = max(coords_round.x - 2, 0); x <= min(coords_round.x + 2, data->width - 1); ++x) {
+        for (uint y = max(coords_round.y - 20, 0); y <= min(coords_round.y + 20, data->height - 1); ++y) {
+            for (uint x = max(coords_round.x - 20, 0); x <= min(coords_round.x + 20, data->width - 1); ++x) {
                 float2 delta = {x - cultist->ability_coords.x, y - cultist->ability_coords.y};
-                if (delta.x * delta.x + delta.y * delta.y <= 2.5f) {
+                if (delta.x * delta.x + delta.y * delta.y <= 20.f * 20.f) {
                     data->lighting_map.dynamic[y * data->width + x] = LightingType::Madness;
                 }
             }
@@ -593,7 +609,7 @@ namespace Simulator {
         if (cultist->ability_cooldown > 0 || cultist->noise < 1.f) {
             return false;
         }
-        cultist->ability_cooldown = 10;
+        cultist->ability_cooldown = 11;
         cultist->ability_coords = data->agents[0].agent->coords;
         return true;
     }
@@ -623,18 +639,30 @@ namespace Simulator {
                 break;
             case Cultist::Action::TurnRightFull:
                 cultist->rotation = fmodf(cultist->rotation - Cultist::rotation_speed, 2.f);
+                if (cultist->rotation < 0.f) {
+                    cultist->rotation += 2.f;
+                }
                 success = true;
                 break;
             case Cultist::Action::TurnRightHalf:
                 cultist->rotation = fmodf(cultist->rotation - Cultist::rotation_speed / 2, 2.f);
+                if (cultist->rotation < 0.f) {
+                    cultist->rotation += 2.f;
+                }
                 success = true;
                 break;
             case Cultist::Action::TurnLeftFull:
                 cultist->rotation = fmodf(cultist->rotation + Cultist::rotation_speed, 2.f);
+                if (cultist->rotation < 0.f) {
+                    cultist->rotation += 2.f;
+                }
                 success = true;
                 break;
             case Cultist::Action::TurnLeftHalf:
                 cultist->rotation = fmodf(cultist->rotation + Cultist::rotation_speed / 2, 2.f);
+                if (cultist->rotation < 0.f) {
+                    cultist->rotation += 2.f;
+                }
                 success = true;
                 break;
             case Cultist::Action::Ability:
@@ -655,10 +683,9 @@ namespace Simulator {
         }
         if (cultist->ability_cooldown > 0) {
             --cultist->ability_cooldown;
-        }
-
-        if (cultist->ability_cooldown == 0) {
-            cultist->ability_coords = {0.f, 0.f};
+            if (cultist->ability_cooldown == 0) {
+                cultist->ability_coords = {0.f, 0.f};
+            }
         }
 
         if (cultist->action == Cultist::Action::GoForward && success) {
@@ -708,7 +735,7 @@ namespace Simulator {
         if (no_monsters) {
             for (uint y = 0; y < 2; ++y) {
                 for (uint x = 0; x < 2; ++x) {
-                    uint ind = (coords_round.y + y) * data->width + (coords_round.x + x);
+                    uint ind = (player->shadow_coords.y + y) * data->width + (player->shadow_coords.x + x);
                     data->object_map[ind] = ObjectType::Clear;
                     *data->player_tensor.getObject(ind) = Utils::getValue<ObjectType>(ObjectType::Clear);
                 }
@@ -720,7 +747,7 @@ namespace Simulator {
                     *data->player_tensor.getObject(ind) = Utils::getValue<ObjectType>(ObjectType::Player);
                 }
             }
-            player->shadow_coords = {(uint) floorf(coords_dest.x), (uint) floorf(coords_dest.y)};
+            player->shadow_coords = coords_dest_round;
         }
 
         player->coords = coords_dest;
@@ -796,21 +823,33 @@ namespace Simulator {
             }
             case Player::Action::TurnRightFull: {
                 player->rotation = fmodf(player->rotation - Player::rotation_speed, 2.f);
+                if (player->rotation < 0.f) {
+                    player->rotation += 2.f;
+                }
                 success = true;
                 break;
             }
             case Player::Action::TurnRightHalf: {
                 player->rotation = fmodf(player->rotation - Player::rotation_speed / 2, 2.f);
+                if (player->rotation < 0.f) {
+                    player->rotation += 2.f;
+                }
                 success = true;
                 break;
             }
             case Player::Action::TurnLeftFull: {
                 player->rotation = fmodf(player->rotation + Player::rotation_speed, 2.f);
+                if (player->rotation < 0.f) {
+                    player->rotation += 2.f;
+                }
                 success = true;
                 break;
             }
             case Player::Action::TurnLeftHalf: {
                 player->rotation = fmodf(player->rotation + Player::rotation_speed / 2, 2.f);
+                if (player->rotation < 0.f) {
+                    player->rotation += 2.f;
+                }
                 success = true;
                 break;
             }
@@ -824,7 +863,7 @@ namespace Simulator {
                 float2 delta_out = {player->coords.x - window->coords_out.x, player->coords.y - window->coords_out.y};
                 float dist_out = delta_out.x * delta_out.x + delta_out.y * delta_out.y;
                 // all windows must face clear area
-                playerUpdatePosition(data, player, dist_in <= dist_out ? window->coords_in : window->coords_out);
+                playerUpdatePosition(data, player, dist_in <= dist_out ? window->coords_out : window->coords_in);
                 player->cooldown = 3;
                 success = true;
                 break;
@@ -851,8 +890,8 @@ namespace Simulator {
                     float2_pair* boundary = &data->boundaries[door->boundary_id];
                     boundary->first.x = door->coords_closed[0].x + 0.5f;
                     boundary->first.y = door->coords_closed[0].y + 0.5f;
-                    boundary->second.x = door->coords_closed[2].x + 0.5f;
-                    boundary->second.y = door->coords_closed[2].y + 0.5f;
+                    boundary->second.x = door->coords_closed[3].x + 0.5f;
+                    boundary->second.y = door->coords_closed[3].y + 0.5f;
                 } else {
                     door->is_open = true;
                     for (uint i = 1; i <= 2; ++i) {
@@ -930,7 +969,7 @@ namespace Simulator {
                     break;
                 case Player::MovementState::Walk:
                     player->movement_state = Player::MovementState::Crouch;
-                    player->speed = 0.325f;
+                    player->speed = 0.375f;
                     success = true;
                     break;
                 }
@@ -1070,13 +1109,16 @@ namespace Simulator {
             if (player->coords.x == coords.x) {
                 data->interactables_mask[id] = (fabsf(player->coords.y - coords.y) <= 3);
             } else {
-                float2 delta = {player->coords.x - coords.x, player->coords.y - coords.y};
-                uint dist = delta.x * delta.x + delta.y * delta.y;
+                float2 delta = {coords.x - player->coords.x, coords.y - player->coords.y};
+                float dist = delta.x * delta.x + delta.y * delta.y;
                 float rotation_door = atanf(delta.y / delta.x) / M_PI;
                 if (delta.x < 0.f) {
-                    rotation_door = rotation_door + 1.f;
+                    rotation_door += 1.f;
                 }
                 float rotation_delta = fmodf(rotation_door - player->rotation, 2.f);
+                if (rotation_delta < 0.f) {
+                    rotation_delta += 2.f;
+                }
                 data->interactables_mask[id] = (dist <= 3 * 3) & (rotation_delta < 1.f / 6 || rotation_delta > 2.f - 1.f / 6);
             }
             
@@ -1126,8 +1168,7 @@ namespace Simulator {
         doActionsDevice(data);
     }
 
-    __global__ void doActionsReset(Data* data, cudaGraphConditionalHandle reset_handle) {
-        doActionsDevice(data);
+    __global__ void updateResetHandle(Data* data, cudaGraphConditionalHandle reset_handle) {
         cudaGraphSetConditional(reset_handle, data->health <= 0.f);
     }
 
@@ -1395,7 +1436,9 @@ namespace Simulator {
                 if (data->sight_masks[agent_id][ind]) {
                     *data->monsters_tensor.getSight(ind) = __float2half_rn(1.f);
                     if (data->object_map[ind] == ObjectType::Player && player->magic_cooldown_invisibility < 46) {
-                        ((Astral*) data->agents[agent_id].agent)->see_player = true;
+                        Astral* astral = (Astral*) data->agents[agent_id].agent;
+                        astral->see_player = true;
+                        astral->updateSeePlayer();
                     }
                 }
             }
@@ -1420,9 +1463,7 @@ namespace Simulator {
         }
     }
 
-    __host__ cudaGraph_t step(Data* data, uint size) {
-        cudaGraph_t graph;
-        cudaGraphCreate(&graph, 0);
+    __host__ void step(cudaGraph_t* graph, Data* data, uint size) {
 
         cudaGraphNodeParams clear_masks_params = { cudaGraphNodeTypeKernel };
         void* clear_masks_input[] = {&data};
@@ -1433,7 +1474,7 @@ namespace Simulator {
             .kernelParams = clear_masks_input
         };
         cudaGraphNode_t clear_masks_node;
-        cudaGraphAddNode(&clear_masks_node, graph, NULL, 0, &clear_masks_params);
+        cudaGraphAddNode(&clear_masks_node, *graph, NULL, 0, &clear_masks_params);
 
         cudaGraphNodeParams actions_params = { cudaGraphNodeTypeKernel };
         void* actions_input[] = {&data};
@@ -1444,7 +1485,7 @@ namespace Simulator {
             .kernelParams = actions_input
         };
         cudaGraphNode_t actions_node;
-        cudaGraphAddNode(&actions_node, graph, {&clear_masks_node}, 1, &actions_params);
+        cudaGraphAddNode(&actions_node, *graph, {&clear_masks_node}, 1, &actions_params);
 
         cudaGraphNodeParams sound_params = { cudaGraphNodeTypeKernel };
         void* sound_input[] = {&data};
@@ -1455,7 +1496,7 @@ namespace Simulator {
             .kernelParams = sound_input
         };
         cudaGraphNode_t sound_node;
-        cudaGraphAddNode(&sound_node, graph, {&actions_node}, 1, &sound_params);
+        cudaGraphAddNode(&sound_node, *graph, {&actions_node}, 1, &sound_params);
 
         cudaGraphNodeParams fill_sight_params = { cudaGraphNodeTypeKernel };
         void* fill_sight_input[] = {&data};
@@ -1466,7 +1507,7 @@ namespace Simulator {
             .kernelParams = fill_sight_input
         };
         cudaGraphNode_t fill_sight_node;
-        cudaGraphAddNode(&fill_sight_node, graph, {&actions_node}, 1, &fill_sight_params);
+        cudaGraphAddNode(&fill_sight_node, *graph, {&actions_node}, 1, &fill_sight_params);
 
         cudaGraphNodeParams fill_shadows_params = { cudaGraphNodeTypeKernel };
         void* fill_shadows_input[] = {&data};
@@ -1477,71 +1518,101 @@ namespace Simulator {
             .kernelParams = fill_shadows_input
         };
         cudaGraphNode_t fill_shadows_node;
-        cudaGraphAddNode(&fill_shadows_node, graph, {&fill_sight_node}, 1, &fill_shadows_params);
-
-        return graph;
+        cudaGraphAddNode(&fill_shadows_node, *graph, {&fill_sight_node}, 1, &fill_shadows_params);
     }
 
-    __host__ cudaGraph_t step(Data* data, uint size, cudaGraphConditionalHandle reset_handle) {
-        cudaGraph_t graph;
-        cudaGraphCreate(&graph, 0);
+    __host__ void stepReset(cudaGraph_t* graph, Data* data, Data* data_base, uint size) {
+
+        cudaGraphConditionalHandle reset_handle;
+        cudaGraphConditionalHandleCreate(&reset_handle, *graph, 0, cudaGraphCondAssignDefault);
 
         cudaGraphNodeParams clear_masks_params = { cudaGraphNodeTypeKernel };
         void* clear_masks_input[] = {&data};
         clear_masks_params.kernel = {
             .func = clearMasks,
-            .gridDim = (size - 1) / 1024 + 1,
-            .blockDim = 1024,
+            .gridDim = dim3((size - 1) / 1024 + 1),
+            .blockDim = dim3(1024),
             .kernelParams = clear_masks_input
         };
         cudaGraphNode_t clear_masks_node;
-        cudaGraphAddNode(&clear_masks_node, graph, NULL, 0, &clear_masks_params);
+        cudaGraphAddNode(&clear_masks_node, *graph, NULL, 0, &clear_masks_params);
 
         cudaGraphNodeParams actions_params = { cudaGraphNodeTypeKernel };
-        void* actions_input[] = {&data, &reset_handle};
+        void* actions_input[] = {&data};
         actions_params.kernel = {
-            .func = doActionsReset,
-            .gridDim = 1,
-            .blockDim = 1,
+            .func = doActions,
+            .gridDim = dim3(1),
+            .blockDim = dim3(1),
             .kernelParams = actions_input
         };
         cudaGraphNode_t actions_node;
-        cudaGraphAddNode(&actions_node, graph, {&clear_masks_node}, 1, &actions_params);
+        cudaGraphAddNode(&actions_node, *graph, {&clear_masks_node}, 1, &actions_params);
 
         cudaGraphNodeParams sound_params = { cudaGraphNodeTypeKernel };
         void* sound_input[] = {&data};
         sound_params.kernel = {
             .func = updateSound,
-            .gridDim = (size - 1) / 1024 + 1,
-            .blockDim = 1024,
+            .gridDim = dim3((size - 1) / 1024 + 1),
+            .blockDim = dim3(1024),
             .kernelParams = sound_input
         };
         cudaGraphNode_t sound_node;
-        cudaGraphAddNode(&sound_node, graph, {&actions_node}, 1, &sound_params);
+        cudaGraphAddNode(&sound_node, *graph, {&actions_node}, 1, &sound_params);
 
         cudaGraphNodeParams fill_sight_params = { cudaGraphNodeTypeKernel };
         void* fill_sight_input[] = {&data};
         fill_sight_params.kernel = {
             .func = fillSight,
-            .gridDim = (size - 1) / 1024 + 1,
-            .blockDim = 1024,
+            .gridDim = dim3((size - 1) / 1024 + 1),
+            .blockDim = dim3(1024),
             .kernelParams = fill_sight_input
         };
         cudaGraphNode_t fill_sight_node;
-        cudaGraphAddNode(&fill_sight_node, graph, {&actions_node}, 1, &fill_sight_params);
+        cudaGraphAddNode(&fill_sight_node, *graph, {&actions_node}, 1, &fill_sight_params);
 
         cudaGraphNodeParams fill_shadows_params = { cudaGraphNodeTypeKernel };
         void* fill_shadows_input[] = {&data};
         fill_shadows_params.kernel = {
             .func = fillShadows,
-            .gridDim = (size - 1) / 1024 + 1,
-            .blockDim = 1024,
+            .gridDim = dim3((size - 1) / 1024 + 1),
+            .blockDim = dim3(1024),
             .kernelParams = fill_shadows_input
         };
         cudaGraphNode_t fill_shadows_node;
-        cudaGraphAddNode(&fill_shadows_node, graph, {&fill_sight_node}, 1, &fill_shadows_params);
+        cudaGraphAddNode(&fill_shadows_node, *graph, {&fill_sight_node}, 1, &fill_shadows_params);
 
-        return graph;
+        cudaGraphNodeParams reset_update_params = { cudaGraphNodeTypeKernel };
+        void* reset_update_input[] = {&data, &reset_handle};
+        reset_update_params.kernel = {
+            .func = updateResetHandle,
+            .gridDim = dim3(1),
+            .blockDim = dim3(1),
+            .kernelParams = reset_update_input
+        };
+        cudaGraphNode_t reset_update_node;
+        cudaGraphAddNode(&reset_update_node, *graph, {&actions_node}, 1, &reset_update_params);
+
+        cudaGraphNodeParams reset_cond_params = { cudaGraphNodeTypeConditional };
+        reset_cond_params.conditional = {
+            .handle = reset_handle,
+            .type = cudaGraphCondTypeIf,
+            .size = 1
+        };
+        cudaGraphNode_t reset_cond_node;
+        cudaGraphNode_t reset_cond_dependencies[] = {fill_shadows_node, reset_update_node}; 
+        cudaGraphAddNode(&reset_cond_node, *graph, reset_cond_dependencies, 2, &reset_cond_params);
+        cudaGraph_t reset_cond_graph = reset_cond_params.conditional.phGraph_out[0];
+
+        cudaGraphNodeParams reset_params = { cudaGraphNodeTypeKernel };
+        void* reset_args[] = {&data_base, &data};
+        reset_params.kernel = {
+            .func = Simulator::copyDeviceToDevice,
+            .gridDim = dim3(1),
+            .blockDim = dim3(1),
+            .kernelParams = reset_args
+        };
+        cudaGraphNode_t reset_node;
+        cudaGraphAddNode(&reset_node, reset_cond_graph, NULL, 0, &reset_params);
     }
 
     __host__ Data* initHost() {
@@ -1582,7 +1653,7 @@ namespace Simulator {
         Door doors_desc[] = {
             {{73.5f, 63.f}, {72.f, 63.f}, boundaries_size, {{73, 61}, {72, 61}, {71, 61}, {73, 64}}, {{73, 61}, {73, 62}, {73, 63}, {73, 64}}, false},
             {{69.f, 65.5f}, {69.f, 67.f}, boundaries_size + 1, {{67, 65}, {67, 66}, {67, 67}, {70, 65}}, {{67, 65}, {68, 65}, {69, 65}, {70, 65}}, false},
-            {{204.5f, 92.f}, {206.f, 92.f}, boundaries_size + 2, {{205, 90}, {206, 90}, {204, 93}}, {{204, 90}, {204, 91}, {204, 92}, {204, 93}}, false}
+            {{204.5f, 92.f}, {206.f, 92.f}, boundaries_size + 2, {{204, 90}, {205, 90}, {206, 90}, {204, 93}}, {{204, 90}, {204, 91}, {204, 92}, {204, 93}}, false}
         };
         uint doors_size = sizeof(doors_desc) / sizeof(doors_desc[0]);
 
@@ -1862,7 +1933,9 @@ namespace Simulator {
 
         Data* data_device = copyHostToDevice(data);
         
-        cudaGraph_t graph = step(data_device, data->height * data->width);
+        cudaGraph_t graph;
+        cudaGraphCreate(&graph, 0);
+        step(&graph, data_device, data->height * data->width);
         
         deleteHost(data);
         
