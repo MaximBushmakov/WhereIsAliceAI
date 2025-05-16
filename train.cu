@@ -23,7 +23,7 @@ cudaGraph_t cudaGraphWhile(cudaGraph_t graph, cudaGraphConditionalHandle handle,
     void* startFunc, void* start_args[], void* updateFunc, void* update_args[]) {
 
     cudaGraphNodeParams start_params = { cudaGraphNodeTypeKernel };
-    start_params.kernel.func = startFunc;
+    start_params.kernel.func = (void*) startFunc;
     start_params.kernel.gridDim = dim3(1, 1, 1);
     start_params.kernel.blockDim = dim3(1, 1, 1);
     start_params.kernel.kernelParams = start_args;
@@ -46,7 +46,7 @@ cudaGraph_t cudaGraphWhile(cudaGraph_t graph, cudaGraphConditionalHandle handle,
     cudaGraphChildGraphNodeGetGraph(out_node, &out_graph);
 
     cudaGraphNodeParams update_params = { cudaGraphNodeTypeKernel };
-    update_params.kernel.func = updateFunc;
+    update_params.kernel.func = (void*) updateFunc;
     update_params.kernel.gridDim = dim3(1, 1, 1);
     update_params.kernel.blockDim = dim3(1, 1, 1);
     update_params.kernel.kernelParams = update_args;
@@ -136,7 +136,7 @@ void runAll() {
 
         cudaGraphNodeParams reset_params = { cudaGraphNodeTypeKernel };
         void* reset_args[] = {&data, &data_base};
-        reset_params.kernel.func = Simulator::copyDeviceToDevice;
+        reset_params.kernel.func = (void*) Simulator::copyDeviceToDevice;
         reset_params.kernel.gridDim = dim3(1);
         reset_params.kernel.blockDim = dim3(1);
         reset_params.kernel.kernelParams = reset_args;

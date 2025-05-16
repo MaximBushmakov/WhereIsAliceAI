@@ -189,7 +189,7 @@ namespace AI {
 
         cudaGraphNodeParams compute_acquire_params = { cudaGraphNodeTypeKernel };
         void* compute_acquire_args[] = {&data->ai_shared};
-        compute_acquire_params.kernel.func = acquireComputeUpstream;
+        compute_acquire_params.kernel.func = (void*) acquireComputeUpstream;
         compute_acquire_params.kernel.gridDim = dim3(1, 1, 1);
         compute_acquire_params.kernel.blockDim = dim3(1, 1, 1);
         compute_acquire_params.kernel.kernelParams = compute_acquire_args;
@@ -221,7 +221,7 @@ namespace AI {
 
         cudaGraphNodeParams write_acquire_params = { cudaGraphNodeTypeKernel };
         void* write_acquire_args[] = {&data->ai_shared};
-        write_acquire_params.kernel.func = acquireWriteUpstream;
+        write_acquire_params.kernel.func = (void*) acquireWriteUpstream;
         write_acquire_params.kernel.gridDim = dim3(1, 1, 1);
         write_acquire_params.kernel.blockDim = dim3(1, 1, 1);
         write_acquire_params.kernel.kernelParams = write_acquire_args;
@@ -232,7 +232,7 @@ namespace AI {
 
         cudaGraphNodeParams write_release_params = { cudaGraphNodeTypeKernel };
         void* write_release_args[] = {&data->ai_shared};
-        write_release_params.kernel.func = releaseWriteUpstream;
+        write_release_params.kernel.func = (void*) releaseWriteUpstream;
         write_release_params.kernel.gridDim = dim3(1, 1, 1);
         write_release_params.kernel.blockDim = dim3(1, 1, 1);
         write_release_params.kernel.kernelParams = write_release_args;
@@ -249,7 +249,7 @@ namespace AI {
 
         cudaGraphNodeParams compute_acquire_all_params = { cudaGraphNodeTypeKernel };
         void* compute_acquire_all_args[] = {&data->ai_shared};
-        compute_acquire_all_params.kernel.func = acquireAllComputeUpstream;
+        compute_acquire_all_params.kernel.func = (void*) acquireAllComputeUpstream;
         compute_acquire_all_params.kernel.gridDim = dim3(1, 1, 1);
         compute_acquire_all_params.kernel.blockDim = dim3(1, 1, 1);
         compute_acquire_all_params.kernel.kernelParams = compute_acquire_all_args;
@@ -260,7 +260,7 @@ namespace AI {
 
         cudaGraphNodeParams compute_release_all_params = { cudaGraphNodeTypeKernel };
         void* compute_release_all_args[] = {&data->ai_shared};
-        compute_release_all_params.kernel.func = releaseAllComputeUpstream;
+        compute_release_all_params.kernel.func = (void*) releaseAllComputeUpstream;
         compute_release_all_params.kernel.gridDim = dim3(1, 1, 1);
         compute_release_all_params.kernel.blockDim = dim3(1, 1, 1);
         compute_release_all_params.kernel.kernelParams = compute_release_all_args;
@@ -269,7 +269,7 @@ namespace AI {
 
         cudaGraphNodeParams compute_release_params = { cudaGraphNodeTypeKernel };
         void* compute_release_args[] = {&data->ai_shared};
-        compute_release_params.kernel.func = releaseComputeUpstream;
+        compute_release_params.kernel.func = (void*) releaseComputeUpstream;
         compute_release_params.kernel.gridDim = dim3(1, 1, 1);
         compute_release_params.kernel.blockDim = dim3(1, 1, 1);
         compute_release_params.kernel.kernelParams = compute_release_args;

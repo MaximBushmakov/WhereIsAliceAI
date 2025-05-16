@@ -1467,7 +1467,7 @@ namespace Simulator {
 
         cudaGraphNodeParams clear_masks_params = { cudaGraphNodeTypeKernel };
         void* clear_masks_input[] = {&data};
-        clear_masks_params.kernel.func = clearMasks;
+        clear_masks_params.kernel.func = (void*) clearMasks;
         clear_masks_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
         clear_masks_params.kernel.blockDim = dim3(1024);
         clear_masks_params.kernel.kernelParams = clear_masks_input;
@@ -1476,7 +1476,7 @@ namespace Simulator {
 
         cudaGraphNodeParams actions_params = { cudaGraphNodeTypeKernel };
         void* actions_input[] = {&data};
-        actions_params.kernel.func = doActions;
+        actions_params.kernel.func = (void*) doActions;
         actions_params.kernel.gridDim = dim3(1);
         actions_params.kernel.blockDim = dim3(1);
         actions_params.kernel.kernelParams = actions_input;
@@ -1485,7 +1485,7 @@ namespace Simulator {
 
         cudaGraphNodeParams sound_params = { cudaGraphNodeTypeKernel };
         void* sound_input[] = {&data};
-        sound_params.kernel.func = updateSound;
+        sound_params.kernel.func = (void*) updateSound;
         sound_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
         sound_params.kernel.blockDim = dim3(1024);
         sound_params.kernel.kernelParams = sound_input;
@@ -1494,7 +1494,7 @@ namespace Simulator {
 
         cudaGraphNodeParams fill_sight_params = { cudaGraphNodeTypeKernel };
         void* fill_sight_input[] = {&data};
-        fill_sight_params.kernel.func = fillSight;
+        fill_sight_params.kernel.func = (void*) fillSight;
         fill_sight_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
         fill_sight_params.kernel.blockDim = dim3(1024);
         fill_sight_params.kernel.kernelParams = fill_sight_input;
@@ -1503,7 +1503,7 @@ namespace Simulator {
 
         cudaGraphNodeParams fill_shadows_params = { cudaGraphNodeTypeKernel };
         void* fill_shadows_input[] = {&data};
-        fill_shadows_params.kernel.func = fillShadows;
+        fill_shadows_params.kernel.func = (void*) fillShadows;
         fill_shadows_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
         fill_shadows_params.kernel.blockDim = dim3(1024);
         fill_shadows_params.kernel.kernelParams = fill_shadows_input;
@@ -1518,7 +1518,7 @@ namespace Simulator {
 
         cudaGraphNodeParams clear_masks_params = { cudaGraphNodeTypeKernel };
         void* clear_masks_input[] = {&data};
-        clear_masks_params.kernel.func = clearMasks;
+        clear_masks_params.kernel.func = (void*) clearMasks;
         clear_masks_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
         clear_masks_params.kernel.blockDim = dim3(1024);
         clear_masks_params.kernel.kernelParams = clear_masks_input;
@@ -1527,7 +1527,7 @@ namespace Simulator {
 
         cudaGraphNodeParams actions_params = { cudaGraphNodeTypeKernel };
         void* actions_input[] = {&data};
-        actions_params.kernel.func = doActions;
+        actions_params.kernel.func = (void*) doActions;
         actions_params.kernel.gridDim = dim3(1);
         actions_params.kernel.blockDim = dim3(1);
         actions_params.kernel.kernelParams = actions_input;
@@ -1536,7 +1536,7 @@ namespace Simulator {
 
         cudaGraphNodeParams sound_params = { cudaGraphNodeTypeKernel };
         void* sound_input[] = {&data};
-        sound_params.kernel.func = updateSound;
+        sound_params.kernel.func = (void*) updateSound;
         sound_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
         sound_params.kernel.blockDim = dim3(1024);
         sound_params.kernel.kernelParams = sound_input;
@@ -1545,7 +1545,7 @@ namespace Simulator {
 
         cudaGraphNodeParams fill_sight_params = { cudaGraphNodeTypeKernel };
         void* fill_sight_input[] = {&data};
-        fill_sight_params.kernel.func = fillSight;
+        fill_sight_params.kernel.func = (void*) fillSight;
         fill_sight_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
         fill_sight_params.kernel.blockDim = dim3(1024);
         fill_sight_params.kernel.kernelParams = fill_sight_input;
@@ -1554,7 +1554,7 @@ namespace Simulator {
 
         cudaGraphNodeParams fill_shadows_params = { cudaGraphNodeTypeKernel };
         void* fill_shadows_input[] = {&data};
-        fill_shadows_params.kernel.func = fillShadows;
+        fill_shadows_params.kernel.func = (void*) fillShadows;
         fill_shadows_params.kernel.gridDim = dim3((size - 1) / 1024 + 1);
         fill_shadows_params.kernel.blockDim = dim3(1024);
         fill_shadows_params.kernel.kernelParams = fill_shadows_input;
@@ -1563,7 +1563,7 @@ namespace Simulator {
 
         cudaGraphNodeParams reset_update_params = { cudaGraphNodeTypeKernel };
         void* reset_update_input[] = {&data, &reset_handle};
-        reset_update_params.kernel.func = updateResetHandle;
+        reset_update_params.kernel.func = (void*) updateResetHandle;
         reset_update_params.kernel.gridDim = dim3(1);
         reset_update_params.kernel.blockDim = dim3(1);
         reset_update_params.kernel.kernelParams = reset_update_input;
@@ -1581,7 +1581,7 @@ namespace Simulator {
 
         cudaGraphNodeParams reset_params = { cudaGraphNodeTypeKernel };
         void* reset_args[] = {&data_base, &data};
-        reset_params.kernel.func = Simulator::copyDeviceToDevice;
+        reset_params.kernel.func = (void*) Simulator::copyDeviceToDevice;
         reset_params.kernel.gridDim = dim3(1);
         reset_params.kernel.blockDim = dim3(1);
         reset_params.kernel.kernelParams = reset_args;
