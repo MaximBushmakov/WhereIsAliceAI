@@ -92,7 +92,7 @@ test_debug: ./build/exe/test_debug.exe
 ./build/obj/test.o: test.cu
 	nvcc -dc $(NVCC_FLAGS) $(TEST_LIBS) test.cu -o ./build/obj/test.o
 
-./build/exe/test.out: ./build/obj/character.o ./build/obj/simulator.o ./build/obj/ai.obj ./build/obj/test.o
+./build/exe/test.out: ./build/obj/character.o ./build/obj/simulator.o ./build/obj/ai.o ./build/obj/test.o
 	nvcc $(NVCC_FLAGS) $(TEST_LIBS) $(TEST_FILES) ./build/obj/character.o ./build/obj/simulator.o ./build/obj/ai.o ./build/obj/test.o -o ./build/exe/test.out
 
 test_linux: ./build/exe/test.out
